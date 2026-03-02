@@ -6,22 +6,25 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-    {
-        Schema::create('badges', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('badges', function (Blueprint $table) {
+        $table->increments('id');
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('badges');
-    }
+        $table->unsignedInteger('user_id');
+        $table->string('name', 80);
+        $table->boolean('status')->default(false);
+        $table->text('description')->nullable();
+
+        $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+
+        $table->index('user_id');
+        $table->index('status');
+    });
+}
+
+public function down(): void
+{
+    Schema::dropIfExists('badges');
+}
 };

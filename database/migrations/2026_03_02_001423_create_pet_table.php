@@ -6,22 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-    {
-        Schema::create('pet', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('pet', function (Blueprint $table) {
+        $table->increments('id');
+        $table->unsignedInteger('user_id')->unique(); 
+        $table->string('name', 20);
+        $table->integer('level')->default(1);
+        $table->integer('experience')->default(0);
+        $table->string('image', 255)->nullable();
+        $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+    });
+}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('pet');
-    }
+public function down(): void
+{
+    Schema::dropIfExists('pet');
+}
 };

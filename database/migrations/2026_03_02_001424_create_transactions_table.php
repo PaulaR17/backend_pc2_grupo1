@@ -6,22 +6,21 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-    {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('transactions', function (Blueprint $table) {
+        $table->increments('id');
+        $table->unsignedInteger('user_id');
+        $table->integer('amount');
+        $table->dateTime('timestamp')->useCurrent();
+        $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+        $table->index('user_id');
+        $table->index('timestamp');
+    });
+}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('transactions');
-    }
+public function down(): void
+{
+    Schema::dropIfExists('transactions');
+}
 };

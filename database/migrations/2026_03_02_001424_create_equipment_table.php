@@ -6,22 +6,28 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-    {
-        Schema::create('equipment', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('equipment', function (Blueprint $table) {
+        $table->unsignedInteger('pet_id')->primary();
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('equipment');
-    }
+        $table->unsignedInteger('hat_id')->nullable();
+        $table->unsignedInteger('glasses_id')->nullable();
+        $table->unsignedInteger('suit_id')->nullable();
+
+        $table->foreign('pet_id')->references('id')->on('pet')->cascadeOnDelete();
+        $table->foreign('hat_id')->references('id')->on('items')->nullOnDelete();
+        $table->foreign('glasses_id')->references('id')->on('items')->nullOnDelete();
+        $table->foreign('suit_id')->references('id')->on('items')->nullOnDelete();
+
+        $table->index('hat_id');
+        $table->index('glasses_id');
+        $table->index('suit_id');
+    });
+}
+
+public function down(): void
+{
+    Schema::dropIfExists('equipment');
+}
 };

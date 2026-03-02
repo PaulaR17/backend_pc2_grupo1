@@ -6,22 +6,28 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
-    {
-        Schema::create('inventory', function (Blueprint $table) {
-            $table->id();
-            $table->timestamps();
-        });
-    }
+{
+    Schema::create('inventory', function (Blueprint $table) {
+        $table->increments('id');
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('inventory');
-    }
+        $table->unsignedInteger('pet_id');
+        $table->unsignedInteger('items_id');
+        $table->integer('quantity')->default(0);
+
+        $table->foreign('pet_id')->references('id')->on('pet')->cascadeOnDelete();
+        $table->foreign('items_id')->references('id')->on('items')->cascadeOnDelete();
+
+        // evitar filas duplicadas por (pet,item)
+        $table->unique(['pet_id', 'items_id']);
+
+        $table->index('pet_id');
+        $table->index('items_id');
+    });
+}
+
+public function down(): void
+{
+    Schema::dropIfExists('inventory');
+}
 };

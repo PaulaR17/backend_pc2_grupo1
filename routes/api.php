@@ -40,7 +40,6 @@ Route::put('/users/{userId}/vehicles/{vehicleId}/default', [VehicleController::c
 
 Route::get('/vehicle-labels', [VehicleController::class, 'labels']);
 
-
 //calcular ruta (se guarda en HISTORY)
 Route::post('/routes', [RouteController::class, 'calculate']);
 
@@ -71,7 +70,7 @@ Route::get('/incidents/{incidentId}', [IncidentController::class, 'show']);
 //predicciones
 Route::get('/predictions', [PredictionController::class, 'index']);
 Route::get('/predictions/latest', [PredictionController::class, 'latest']);
-Route::get('/predictions/district/{district}', [PredictionController::class, 'byDistrict']);
+Route::get('/predictions/districts/{district}', [PredictionController::class, 'byDistrict']);
 
 //todo lo de la mascota
 Route::get('/users/{userId}/pet', [PetController::class, 'show']);

@@ -18,6 +18,7 @@ class PredictionController extends Controller
 
     public function byDistrict(string $district)
     {
+        $districtCode = (int) $district; // 01 y 1 => 1 por si acas
         return response()->json(['ok' => true, 'endpoint' => 'predictions.byDistrict', 'district' => $district]);
     }
 }
