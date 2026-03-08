@@ -8,7 +8,6 @@ class VehicleLabel extends Model
 {
     protected $table = 'vehicle_labels';
     public $timestamps = false;
-
     protected $fillable = [
         'code',
         'name',

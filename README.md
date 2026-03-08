@@ -13,5 +13,3 @@ At this stage, the project includes:
 The database runs in Docker on the virtual machine and is accessed from the local development environment.
 
 The `.env` file is not included in the repository.
-
-More features (models, migrations and endpoints) will be implemented during development.

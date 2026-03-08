@@ -99,10 +99,8 @@ class AdminController extends Controller
         return response()->json(['ok' => true, 'deleted' => true]);
     }
 
-    public function runPredictions()
+    public function runPredictions() //aqui metermos para que haga las predicciones luego, pero de momento es solo para ver si funciona
     {
-        // TODO: aquí luego lanzas el job/command que calcule y guarde predicciones
-        // De momento solo confirmamos que el endpoint existe.
-        return response()->json(['ok' => true, 'message' => 'Prediction job trigger placeholder']);
+        return response()->json(['ok' => true, 'message' => 'funciona, placeholder']);
     }
 }

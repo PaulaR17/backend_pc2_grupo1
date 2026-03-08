@@ -14,4 +14,9 @@ return new class extends Migration
         $table->text('description')->nullable();
     });
 }
+
+public function down(): void
+{
+    Schema::dropIfExists('vehicle_labels');
+}
 };

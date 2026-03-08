@@ -41,7 +41,7 @@ class ItemController extends Controller
             'item_id' => 'nullable|integer|exists:items,id',
         ]);
 
-        // equipo simple: 1 registro por slot
+        //1 registro por slot solo, si ya hay uno con ese slot se actualiza, sino se crea nuevo
         $row = Equipment::updateOrCreate(
             ['user_id' => $userId, 'slot' => $data['slot']],
             ['item_id' => $data['item_id'], 'updated_at' => now()]

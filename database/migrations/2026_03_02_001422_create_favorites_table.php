@@ -20,4 +20,9 @@ return new class extends Migration
         $table->index('history_id');
     });
 }
+
+public function down(): void
+{
+    Schema::dropIfExists('favorites');
+}
 };

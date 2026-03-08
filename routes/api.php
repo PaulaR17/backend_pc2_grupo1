@@ -21,7 +21,7 @@ Route::get('/health', function () {
 //usuarios
 Route::get('/users/{userId}', [UserController::class, 'show']);
 Route::put('/users/{userId}', [UserController::class, 'update']);
-Route::delete('/users/{userId}', [UserController::class, 'deactivate']); // status=false
+Route::delete('/users/{userId}', [UserController::class, 'deactivate']); 
 Route::get('/users/{userId}/stats', [UserController::class, 'stats']);
 
 //user profile
