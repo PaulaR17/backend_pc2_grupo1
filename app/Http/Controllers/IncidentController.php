@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Incident;
 
 class IncidentController extends Controller
 {
-    public function index(Request $request)
+    public function index()
     {
-        return response()->json(['ok' => true, 'endpoint' => 'incidents.index', 'query' => $request->query()]);
+        $rows = Incident::where('active', true)
+            ->orderByDesc('created_at')
+            ->get();
+
+        return response()->json($rows);
     }
 
     public function show(int $incidentId)
     {
-        return response()->json(['ok' => true, 'endpoint' => 'incidents.show', 'incidentId' => $incidentId]);
+        $row = Incident::findOrFail($incidentId);
+        return response()->json($row);
     }
 }

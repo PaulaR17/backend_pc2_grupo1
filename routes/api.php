@@ -5,13 +5,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\UserProfileController;
 use App\Http\Controllers\VehicleController;
-use App\Http\Controllers\RouteController;
 use App\Http\Controllers\GuestSessionController;
 use App\Http\Controllers\IncidentController;
 use App\Http\Controllers\PredictionController;
 use App\Http\Controllers\PetController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\RouteController;
+use App\Http\Controllers\PoiController;
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -39,12 +40,6 @@ Route::delete('/users/{userId}/vehicles/{vehicleId}', [VehicleController::class,
 Route::put('/users/{userId}/vehicles/{vehicleId}/default', [VehicleController::class, 'setDefault']);
 
 Route::get('/vehicle-labels', [VehicleController::class, 'labels']);
-
-//calcular ruta (se guarda en HISTORY)
-Route::post('/routes', [RouteController::class, 'calculate']);
-
-//preview (NO SE GUARDA)
-Route::post('/routes/preview', [RouteController::class, 'preview']);
 
 //ruta detallada == entrada al historial
 Route::get('/routes/{historyId}', [RouteController::class, 'detail']);
@@ -81,6 +76,20 @@ Route::get('/users/{userId}/inventory', [ItemController::class, 'inventory']);
 Route::get('/users/{userId}/badges', [ItemController::class, 'badges']);
 Route::put('/users/{userId}/equipment', [ItemController::class, 'updateEquipment']);
 
+// ORS - buscar ubicaciones (geocoding)
+Route::get('/locations/search', [RouteController::class, 'searchLocation']);
+
+// ORS - calcular ruta (no guarda)
+Route::post('/routes/preview', [RouteController::class, 'preview']);
+
+// ORS - calcular ruta (tu endpoint que guarda en history)
+Route::post('/routes', [RouteController::class, 'calculate']);
+
+//POIs (para después de esta entrega, pero endpoints preparados)
+Route::get('/pois/categories', [PoiController::class, 'categories']);
+Route::post('/pois/search', [PoiController::class, 'search']);
+Route::post('/pois/stats', [PoiController::class, 'stats']);
+
 //admin
 Route::prefix('admin')->group(function () {
 
@@ -96,4 +105,7 @@ Route::prefix('admin')->group(function () {
     Route::delete('/incidents/{incidentId}', [AdminController::class, 'deleteIncident']);
 
     Route::post('/predictions/run', [AdminController::class, 'runPredictions']);
+
+
+
 });

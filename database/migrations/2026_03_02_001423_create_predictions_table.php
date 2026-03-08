@@ -7,25 +7,23 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     public function up(): void
-{
-    Schema::create('predictions', function (Blueprint $table) {
-        $table->increments('id');
+    {
+        Schema::create('predictions', function (Blueprint $table) {
+            $table->increments('id');
+            $table->unsignedTinyInteger('district'); // 1..21
+            $table->decimal('probability', 5, 4);
+            $table->enum('level', ['BAJO', 'MEDIO', 'ALTO']);
+            $table->dateTime('predicted_at')->useCurrent();
+            $table->string('model_type', 50);
+            $table->string('target_type', 50);
+            $table->index('district');
+            $table->index('predicted_at');
 
-        // Ajusta esta lista a vuestros distritos reales
-        $table->enum('district', ['CENTRO']);
-        $table->decimal('probability', 5, 4);
-        $table->enum('level', ['BAJO', 'MEDIO', 'ALTO']);
+        });
+    }
 
-        // imprescindible para "latest"
-        $table->dateTime('predicted_at')->useCurrent();
-
-        $table->index('district');
-        $table->index('predicted_at');
-    });
-}
-
-public function down(): void
-{
-    Schema::dropIfExists('predictions');
-}
+    public function down(): void
+    {
+        Schema::dropIfExists('predictions');
+    }
 };

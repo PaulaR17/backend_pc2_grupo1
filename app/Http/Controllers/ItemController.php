@@ -2,27 +2,51 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
+use App\Models\Item;
+use App\Models\Inventory;
+use App\Models\Equipment;
+use App\Models\Badge;
 use Illuminate\Http\Request;
 
 class ItemController extends Controller
 {
-    public function catalog(Request $request)
+    public function catalog()
     {
-        return response()->json(['ok' => true, 'endpoint' => 'items.catalog', 'query' => $request->query()]);
+        return response()->json(Item::all());
     }
 
     public function inventory(int $userId)
     {
-        return response()->json(['ok' => true, 'endpoint' => 'users.inventory', 'userId' => $userId]);
+        User::findOrFail($userId);
+
+        $rows = Inventory::where('user_id', $userId)->get();
+        return response()->json($rows);
     }
 
     public function badges(int $userId)
     {
-        return response()->json(['ok' => true, 'endpoint' => 'users.badges', 'userId' => $userId]);
+        User::findOrFail($userId);
+
+        $rows = Badge::where('user_id', $userId)->get();
+        return response()->json($rows);
     }
 
-    public function updateEquipment(int $userId, Request $request)
+    public function updateEquipment(Request $request, int $userId)
     {
-        return response()->json(['ok' => true, 'endpoint' => 'users.equipment.update', 'userId' => $userId, 'payload' => $request->all()]);
+        User::findOrFail($userId);
+
+        $data = $request->validate([
+            'slot' => 'required|string|max:30',
+            'item_id' => 'nullable|integer|exists:items,id',
+        ]);
+
+        // equipo simple: 1 registro por slot
+        $row = Equipment::updateOrCreate(
+            ['user_id' => $userId, 'slot' => $data['slot']],
+            ['item_id' => $data['item_id'], 'updated_at' => now()]
+        );
+
+        return response()->json($row);
     }
 }
