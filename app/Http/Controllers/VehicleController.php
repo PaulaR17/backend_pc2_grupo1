@@ -10,80 +10,142 @@ use Illuminate\Support\Facades\DB;
 
 class VehicleController extends Controller
 {
+   
     public function labels()
     {
-        return response()->json(VehicleLabel::all());
+        return response()->json(
+            VehicleLabel::all()
+        );
     }
 
+  
     public function index(int $userId)
     {
         User::findOrFail($userId);
-        return response()->json(Vehicle::where('user_id', $userId)->get());
+
+        $vehicles = Vehicle::with('label')
+            ->where('user_id', $userId)
+            ->get();
+
+        return response()->json($vehicles);
     }
 
     public function store(Request $request, int $userId)
     {
         User::findOrFail($userId);
+
         $data = $request->validate([
-            'type' => 'required|string|max:50',
-            'label_id' => 'nullable|integer|exists:vehicle_labels,id',
+            'type' => 'required|in:CAR,MOTORBIKE,VAN',
+            'vehicle_label_id' => 'nullable|integer|exists:vehicle_labels,id',
+            'nickname' => 'nullable|string|max:50',
+            'is_electric' => 'sometimes|boolean',
             'is_default' => 'sometimes|boolean',
         ]);
+
         $vehicle = new Vehicle();
         $vehicle->user_id = $userId;
         $vehicle->type = $data['type'];
-        $vehicle->label_id = $data['label_id'] ?? null;
+        $vehicle->vehicle_label_id = $data['vehicle_label_id'] ?? null;
+        $vehicle->nickname = $data['nickname'] ?? null;
+        $vehicle->is_electric = (bool)($data['is_electric'] ?? false);
         $vehicle->is_default = (bool)($data['is_default'] ?? false);
         $vehicle->save();
+
         if ($vehicle->is_default) {
             Vehicle::where('user_id', $userId)
                 ->where('id', '!=', $vehicle->id)
                 ->update(['is_default' => false]);
         }
-        return response()->json($vehicle, 201);
+
+        return response()->json(
+            Vehicle::with('label')->findOrFail($vehicle->id),
+            201
+        );
     }
 
+ 
     public function show(int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
-        $vehicle = Vehicle::where('user_id', $userId)->where('id', $vehicleId)->firstOrFail();
+
+        $vehicle = Vehicle::with('label')
+            ->where('user_id', $userId)
+            ->where('id', $vehicleId)
+            ->firstOrFail();
+
         return response()->json($vehicle);
     }
 
+  
     public function update(Request $request, int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
+
         $data = $request->validate([
-            'type' => 'sometimes|string|max:50',
-            'label_id' => 'sometimes|nullable|integer|exists:vehicle_labels,id',
+            'type' => 'sometimes|in:CAR,MOTORBIKE,VAN',
+            'vehicle_label_id' => 'sometimes|nullable|integer|exists:vehicle_labels,id',
+            'nickname' => 'sometimes|nullable|string|max:50',
+            'is_electric' => 'sometimes|boolean',
             'is_default' => 'sometimes|boolean',
         ]);
-        $vehicle = Vehicle::where('user_id', $userId)->where('id', $vehicleId)->firstOrFail();
+
+        $vehicle = Vehicle::where('user_id', $userId)
+            ->where('id', $vehicleId)
+            ->firstOrFail();
+
         $vehicle->fill($data);
         $vehicle->save();
+
         if (array_key_exists('is_default', $data) && $vehicle->is_default) {
             Vehicle::where('user_id', $userId)
                 ->where('id', '!=', $vehicle->id)
                 ->update(['is_default' => false]);
         }
-        return response()->json($vehicle);
+
+        return response()->json(
+            Vehicle::with('label')->findOrFail($vehicle->id)
+        );
     }
 
+   
     public function delete(int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
-        $vehicle = Vehicle::where('user_id', $userId)->where('id', $vehicleId)->firstOrFail();
+
+        $vehicle = Vehicle::where('user_id', $userId)
+            ->where('id', $vehicleId)
+            ->firstOrFail();
+
         $vehicle->delete();
-        return response()->json(['ok' => true]);
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Vehicle deleted',
+        ]);
     }
+
 
     public function setDefault(int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
-        DB::transaction(function () use ($userId, $vehicleId) {
-            Vehicle::where('user_id', $userId)->update(['is_default' => false]);
-            Vehicle::where('user_id', $userId)->where('id', $vehicleId)->update(['is_default' => true]);
+
+        $vehicle = Vehicle::where('user_id', $userId)
+            ->where('id', $vehicleId)
+            ->firstOrFail();
+
+        DB::transaction(function () use ($userId, $vehicle) {
+            Vehicle::where('user_id', $userId)->update([
+                'is_default' => false,
+            ]);
+
+            $vehicle->update([
+                'is_default' => true,
+            ]);
         });
-        return response()->json(['ok' => true, 'default_vehicle_id' => $vehicleId]);
+
+        return response()->json([
+            'ok' => true,
+            'default_vehicle_id' => $vehicleId,
+        ]);
     }
 }
