@@ -10,19 +10,14 @@ return new class extends Migration
 {
     Schema::create('inventory', function (Blueprint $table) {
         $table->increments('id');
-
-        $table->unsignedInteger('pet_id');
-        $table->unsignedInteger('items_id');
-        $table->integer('quantity')->default(0);
-
-        $table->foreign('pet_id')->references('id')->on('pet')->cascadeOnDelete();
-        $table->foreign('items_id')->references('id')->on('items')->cascadeOnDelete();
-
-        // evitar filas duplicadas por (pet,item)
-        $table->unique(['pet_id', 'items_id']);
-
-        $table->index('pet_id');
-        $table->index('items_id');
+        $table->unsignedInteger('user_id');
+        $table->unsignedInteger('item_id');
+        $table->integer('quantity')->default(1);
+        $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
+        $table->foreign('item_id')->references('id')->on('items')->cascadeOnDelete();
+        $table->unique(['user_id', 'item_id']);
+        $table->index('user_id');
+        $table->index('item_id');
     });
 }
 

@@ -11,8 +11,10 @@ class History extends Model
 
     protected $fillable = [
         'user_id',
-        'origin_lat', 'origin_lon',
-        'dest_lat', 'dest_lon',
+        'origin_lat',
+        'origin_lon',
+        'dest_lat',
+        'dest_lon',
         'distance_km',
         'duration_min',
         'created_at',

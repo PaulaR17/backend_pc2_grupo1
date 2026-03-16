@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-// use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -15,12 +14,13 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'mail',
+        'password_hash',
         'rol',
         'status',
     ];
 
     protected $hidden = [
-        //para ocultar el pssw y token
+        'password_hash',
     ];
 
     protected $casts = [
@@ -51,7 +51,7 @@ class User extends Authenticatable
     {
         return $this->hasOne(Pet::class, 'user_id', 'id');
     }
-    
+
     public function badges()
     {
         return $this->hasMany(Badge::class, 'user_id', 'id');

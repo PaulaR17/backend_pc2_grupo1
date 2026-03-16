@@ -15,10 +15,12 @@ return new class extends Migration
         $table->decimal('origin_lon', 9, 6);
         $table->decimal('dest_lat', 9, 6);
         $table->decimal('dest_lon', 9, 6);
-        $table->dateTime('timestamp')->useCurrent();
+        $table->decimal('distance_km', 8, 2)->nullable();
+        $table->decimal('duration_min', 8, 2)->nullable();
+        $table->dateTime('created_at')->useCurrent();
         $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         $table->index('user_id');
-        $table->index('timestamp');
+        $table->index('created_at');
     });
 }
 

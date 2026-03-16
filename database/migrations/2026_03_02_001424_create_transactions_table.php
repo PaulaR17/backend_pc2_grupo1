@@ -11,11 +11,13 @@ return new class extends Migration
     Schema::create('transactions', function (Blueprint $table) {
         $table->increments('id');
         $table->unsignedInteger('user_id');
+        $table->string('type', 50);
         $table->integer('amount');
-        $table->dateTime('timestamp')->useCurrent();
+        $table->dateTime('created_at')->useCurrent();
         $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         $table->index('user_id');
-        $table->index('timestamp');
+        $table->index('type');
+        $table->index('created_at');
     });
 }
 

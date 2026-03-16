@@ -13,6 +13,8 @@ class Item extends Model
         'name',
         'type',
         'rarity',
+        'description',
+        'image',
         'price',
         'active',
     ];

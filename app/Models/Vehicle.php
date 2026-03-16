@@ -11,12 +11,15 @@ class Vehicle extends Model
 
     protected $fillable = [
         'user_id',
-        'label_id',
+        'vehicle_label_id',
         'type',
+        'nickname',
+        'is_electric',
         'is_default',
     ];
 
     protected $casts = [
+        'is_electric' => 'boolean',
         'is_default' => 'boolean',
     ];
 
@@ -27,6 +30,6 @@ class Vehicle extends Model
 
     public function label()
     {
-        return $this->belongsTo(VehicleLabel::class, 'label_id', 'id');
+        return $this->belongsTo(VehicleLabel::class, 'vehicle_label_id', 'id');
     }
 }

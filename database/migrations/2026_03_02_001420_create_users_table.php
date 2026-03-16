@@ -10,11 +10,12 @@ return new class extends Migration
 {
     Schema::create('users', function (Blueprint $table) { //creamos la tabla users con sus columnas, el blueprint es para definir la estructura de la tabla
         $table->increments('id'); //al marcarlo como increments, se convierte en una clave primaria automatico y se sabe que es int tmb
+        $table->string('name', 100);
         $table->string('mail', 100)->unique();
         $table->string('password_hash', 255);
         $table->enum('rol', ['USER', 'ADMIN']);
         $table->boolean('status')->default(true);
-        $table->dateTime('created_at')->useCurrent();
+        $table->timestamps();;
         //índices extra para buscar rapidito por columnas y no tener que mirar TODO
         $table->index('rol');
         $table->index('status');

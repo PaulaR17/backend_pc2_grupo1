@@ -8,13 +8,14 @@ class VehicleLabel extends Model
 {
     protected $table = 'vehicle_labels';
     public $timestamps = false;
+
     protected $fillable = [
-        'code',
         'name',
+        'description',
     ];
 
     public function vehicles()
     {
-        return $this->hasMany(Vehicle::class, 'label_id', 'id');
+        return $this->hasMany(Vehicle::class, 'vehicle_label_id', 'id');
     }
 }

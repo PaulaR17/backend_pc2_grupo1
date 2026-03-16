@@ -10,11 +10,12 @@ return new class extends Migration
 {
     Schema::create('pet', function (Blueprint $table) {
         $table->increments('id');
-        $table->unsignedInteger('user_id')->unique(); 
+        $table->unsignedInteger('user_id')->unique();
         $table->string('name', 20);
         $table->integer('level')->default(1);
-        $table->integer('experience')->default(0);
+        $table->integer('xp')->default(0);
         $table->string('image', 255)->nullable();
+        $table->dateTime('updated_at')->nullable();
         $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
     });
 }

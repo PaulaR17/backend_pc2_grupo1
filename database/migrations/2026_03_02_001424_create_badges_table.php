@@ -10,16 +10,13 @@ return new class extends Migration
 {
     Schema::create('badges', function (Blueprint $table) {
         $table->increments('id');
-
         $table->unsignedInteger('user_id');
-        $table->string('name', 80);
-        $table->boolean('status')->default(false);
-        $table->text('description')->nullable();
-
+        $table->string('code', 80);
+        $table->dateTime('earned_at')->nullable();
         $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
-
         $table->index('user_id');
-        $table->index('status');
+        $table->index('code');
+        //mejor usamos code para identificar que insignia tiene el usuario, al final como se ralacionan ya sabemos que una linea serña una badge que ya tiene el user
     });
 }
 

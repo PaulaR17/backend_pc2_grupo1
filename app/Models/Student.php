@@ -1,6 +1,6 @@
 <?php
 
-#esto dice como me comunico con la base de datos 
+//esto dice como me comunico con la base de datos 
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;

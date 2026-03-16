@@ -14,6 +14,7 @@ class Pet extends Model
         'name',
         'level',
         'xp',
+        'image',
         'updated_at',
     ];
 
