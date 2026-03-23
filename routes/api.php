@@ -91,21 +91,20 @@ Route::post('/pois/search', [PoiController::class, 'search']);
 Route::post('/pois/stats', [PoiController::class, 'stats']);
 
 //admin
-Route::prefix('admin')->group(function () {
+Route::prefix('admin')
+    ->middleware(['jwt.auth', 'admin'])
+    ->group(function () {
 
-    Route::get('/dashboard', [AdminController::class, 'dashboard']);
+        Route::get('/dashboard', [AdminController::class, 'dashboard']);
 
-    Route::get('/users', [AdminController::class, 'users']);
-    Route::get('/users/{userId}', [AdminController::class, 'userDetail']);
-    Route::put('/users/{userId}', [AdminController::class, 'updateUser']);
-    Route::delete('/users/{userId}', [AdminController::class, 'deactivateUser']);
+        Route::get('/users', [AdminController::class, 'users']);
+        Route::get('/users/{userId}', [AdminController::class, 'userDetail']);
+        Route::put('/users/{userId}', [AdminController::class, 'updateUser']);
+        Route::delete('/users/{userId}', [AdminController::class, 'deactivateUser']);
 
-    Route::post('/incidents', [AdminController::class, 'createIncident']);
-    Route::put('/incidents/{incidentId}', [AdminController::class, 'updateIncident']);
-    Route::delete('/incidents/{incidentId}', [AdminController::class, 'deleteIncident']);
+        Route::post('/incidents', [AdminController::class, 'createIncident']);
+        Route::put('/incidents/{incidentId}', [AdminController::class, 'updateIncident']);
+        Route::delete('/incidents/{incidentId}', [AdminController::class, 'deleteIncident']);
 
-    Route::post('/predictions/run', [AdminController::class, 'runPredictions']);
-
-
-
-});
+        Route::post('/predictions/run', [AdminController::class, 'runPredictions']);
+    });
