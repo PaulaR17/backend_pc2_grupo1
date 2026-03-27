@@ -108,7 +108,7 @@ class RouteController extends Controller
     public function calculate(Request $request)
     {
         $data = $request->validate([
-            'user_id' => 'required|integer|exists:users,id',
+            'user_id' => 'required|integer|exists:users,id,deleted_at,NULL',
             'origin.lon' => 'required|numeric|between:-180,180',
             'origin.lat' => 'required|numeric|between:-90,90',
             'destination.lon' => 'required|numeric|between:-180,180',
@@ -228,7 +228,7 @@ class RouteController extends Controller
         User::findOrFail($userId);
 
         $data = $request->validate([
-            'history_id' => 'required|integer|exists:history,id',
+            'history_id' => 'required|integer|exists:history,id,deleted_at,NULL',
         ]);
 
         $history = History::where('user_id', $userId)

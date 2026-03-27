@@ -38,7 +38,7 @@ class ItemController extends Controller
 
         $data = $request->validate([
             'slot' => 'required|string|max:30',
-            'item_id' => 'nullable|integer|exists:items,id',
+            'item_id' => 'nullable|integer|exists:items,id,deleted_at,NULL',
         ]);
 
         //1 registro por slot solo, si ya hay uno con ese slot se actualiza, sino se crea nuevo

@@ -36,7 +36,7 @@ class VehicleController extends Controller
 
         $data = $request->validate([
             'type' => 'required|in:CAR,MOTORBIKE,VAN',
-            'vehicle_label_id' => 'nullable|integer|exists:vehicle_labels,id',
+            'vehicle_label_id' => 'nullable|integer|exists:vehicle_labels,id,deleted_at,NULL',
             'nickname' => 'nullable|string|max:50',
             'is_electric' => 'sometimes|boolean',
             'is_default' => 'sometimes|boolean',
@@ -83,7 +83,7 @@ class VehicleController extends Controller
 
         $data = $request->validate([
             'type' => 'sometimes|in:CAR,MOTORBIKE,VAN',
-            'vehicle_label_id' => 'sometimes|nullable|integer|exists:vehicle_labels,id',
+            'vehicle_label_id' => 'sometimes|nullable|integer|exists:vehicle_labels,id,deleted_at,NULL',
             'nickname' => 'sometimes|nullable|string|max:50',
             'is_electric' => 'sometimes|boolean',
             'is_default' => 'sometimes|boolean',
