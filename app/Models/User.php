@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable
 {
@@ -62,5 +63,17 @@ class User extends Authenticatable
     public function transactions()
     {
         return $this->hasMany(Transaction::class, 'user_id', 'id');
+    }
+
+    public function getJWTIdentifier()
+    {
+        $id = $this->getKey();
+        return $id;
+    }
+
+    public function getJWTCustomClaims()
+    {
+        $claims = [];
+        return $claims;
     }
 }

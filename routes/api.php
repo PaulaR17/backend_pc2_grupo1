@@ -108,3 +108,6 @@ Route::prefix('admin')
 
         Route::post('/predictions/run', [AdminController::class, 'runPredictions']);
     });
+
+//autenticación
+Route::post('/login', [App\Http\Controllers\AuthController::class, 'login']);
