@@ -7,46 +7,37 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
-    public function show(int $userId)
+    public function show(User $user)
     {
-        $user = User::with(['profile', 'vehicles'])->findOrFail($userId); //carga el perfil y los vehículos del usuario findOrFail para lanzar un 404 si no existe
-        return response()->json($user);
+        return response()->json($user->load(['profile', 'vehicles']));
     }
 
-    public function update(Request $request, int $userId) //actualiza el usuario con los datos proporcionados en la solicitud
+    public function update(Request $request, User $user)
     {
         $data = $request->validate([
-            'name' => 'sometimes|string|max:100', //sometimes para que no sea obligatorio, string para que sea una cadena de texto y max:100 para limitar a 100 caracteres
+            'name' => 'sometimes|string|max:100',
             'mail' => 'sometimes|email|max:100',
             'rol' => 'sometimes|in:USER,ADMIN',
             'status' => 'sometimes|boolean',
         ]);
 
-        $user = User::findOrFail($userId);
-        $user->fill($data);
-        $user->save();
+        $user->update($data);
         return response()->json($user);
     }
 
-    public function deactivate(int $userId)
+    public function deactivate(User $user)
     {
-        $user = User::findOrFail($userId);
-        $user->status = false;
-        $user->save();
+        $user->update(['status' => false]);
         return response()->json(['ok' => true, 'deactivated' => true]);
     }
 
-    public function stats(int $userId) //estadisticas basicas, podemos meter mas
+    public function stats(User $user)
     {
-        $user = User::findOrFail($userId);
-        $historyCount = $user->history()->count(); 
-        $favoritesCount = $user->favorites()->count();
-        $vehiclesCount = $user->vehicles()->count();
         return response()->json([
             'user_id' => $user->id,
-            'history_count' => $historyCount,
-            'favorites_count' => $favoritesCount,
-            'vehicles_count' => $vehiclesCount,
+            'history_count' => $user->history()->count(), 
+            'favorites_count' => $user->favorites()->count(),
+            'vehicles_count' => $user->vehicles()->count(),
         ]);
     }
 }

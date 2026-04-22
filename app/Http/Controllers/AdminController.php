@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
+
     public function dashboard()
     {
         return response()->json([
@@ -17,18 +18,20 @@ class AdminController extends Controller
         ]);
     }
 
+
     public function users()
     {
         return response()->json(User::orderBy('id')->get());
     }
 
-    public function userDetail(int $userId)
+    
+    public function userDetail(User $userId)
     {
-        $user = User::with(['profile', 'vehicles'])->findOrFail($userId);
-        return response()->json($user);
+        return response()->json($userId->load(['profile', 'vehicles']));
     }
 
-    public function updateUser(Request $request, int $userId)
+
+    public function updateUser(Request $request, User $userId)
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:100',
@@ -37,22 +40,19 @@ class AdminController extends Controller
             'status' => 'sometimes|boolean',
         ]);
 
-        $user = User::findOrFail($userId);
-        $user->fill($data);
-        $user->save();
+        $userId->update($data);
 
-        return response()->json($user);
+        return response()->json($userId);
     }
 
-    public function deactivateUser(int $userId)
+    
+    public function deactivateUser(User $userId)
     {
-        $user = User::findOrFail($userId);
-        $user->status = false;
-        $user->save();
-
+        $userId->update(['status' => false]);
         return response()->json(['ok' => true]);
     }
 
+ 
     public function createIncident(Request $request)
     {
         $data = $request->validate([
@@ -64,15 +64,12 @@ class AdminController extends Controller
             'description' => 'sometimes|string|max:1000',
         ]);
 
-        $incident = new Incident();
-        $incident->fill($data);
-        $incident->created_at = now();
-        $incident->save();
-
+        $incident = Incident::create($data);
         return response()->json($incident, 201);
     }
 
-    public function updateIncident(Request $request, int $incidentId)
+
+    public function updateIncident(Request $request, Incident $incidentId)
     {
         $data = $request->validate([
             'type' => 'sometimes|in:ACCIDENT,ROADWORK,EVENT',
@@ -83,24 +80,25 @@ class AdminController extends Controller
             'description' => 'sometimes|string|max:1000',
         ]);
 
-        $incident = Incident::findOrFail($incidentId);
-        $incident->fill($data);
-        $incident->save();
+        $incidentId->update($data);
 
-        return response()->json($incident);
+        return response()->json($incidentId);
     }
 
-    public function deleteIncident(int $incidentId)
+    
+    public function deleteIncident(Incident $incidentId)
     {
-        $incident = Incident::findOrFail($incidentId);
-        $incident->active = false;
-        $incident->save();
+        $incidentId->update(['active' => false]);
 
         return response()->json(['ok' => true, 'deleted' => true]);
     }
 
-    public function runPredictions() //aqui metermos para que haga las predicciones luego, pero de momento es solo para ver si funciona
+ 
+    public function runPredictions()
     {
-        return response()->json(['ok' => true, 'message' => 'funciona, placeholder']);
+        return response()->json([
+            'ok' => true, 
+            'message' => 'calculo de predicciones done.'
+        ]);
     }
 }

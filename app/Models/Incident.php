@@ -4,14 +4,14 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Incident extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $table = 'incidents';
-    public $timestamps = false;
-
+    public $timestamps = true; 
     protected $fillable = [
         'type',
         'title',
@@ -19,11 +19,12 @@ class Incident extends Model
         'lat',
         'lon',
         'active',
-        'created_at',
     ];
 
     protected $casts = [
         'active' => 'boolean',
-        'created_at' => 'datetime',
+        'lat' => 'float',
+        'lon' => 'float',
     ];
+
 }
