@@ -11,35 +11,45 @@ use Illuminate\Support\Facades\Http; // <--- Importante para la API externa
 class RouteController extends Controller
 {
     public function searchLocation(Request $request)
-    {
-        $q = $request->query('q');
-        $limit = max(1, min((int) $request->query('limit', 5), 20));
+{
+    $q = $request->query('q');
+    $limit = max(1, min((int) $request->query('limit', 5), 20));
 
-        if (!$q || mb_strlen($q) < 3) {
-            return response()->json(['message' => 'q is required (min 3 chars)'], 422);
-        }
-
-        $url = "https://api.openrouteservice.org/geocode/search";
-        
-        $response = Http::withHeaders(['Authorization' => env('ORS_API_KEY')])
-            ->get($url, [
-                'text' => $q,
-                'size' => $limit,
-                'lang' => 'es'
-            ]);
-
-        if ($response->failed()) abort(502, "ORS Error");
-
-        $results = collect($response->json()['features'] ?? [])->map(function ($f) {
-            return [
-                'text' => $f['properties']['label'] ?? $f['properties']['name'],
-                'lon'  => $f['geometry']['coordinates'][0],
-                'lat'  => $f['geometry']['coordinates'][1],
-            ];
-        });
-
-        return response()->json(['results' => $results]);
+    if (!$q || mb_strlen($q) < 3) {
+        return response()->json(['message' => 'q is required (min 3 chars)'], 422);
     }
+
+    $url = "https://api.openrouteservice.org/geocode/search";
+    
+    $response = Http::withHeaders(['Authorization' => env('ORS_API_KEY')])
+        ->get($url, [
+            'text' => $q . ', Madrid, España',
+            'size' => $limit,
+            'lang' => 'es',
+            'boundary.country' => 'ES',
+            'boundary.rect.min_lon' => -3.90,
+            'boundary.rect.min_lat' => 40.30,
+            'boundary.rect.max_lon' => -3.50,
+            'boundary.rect.max_lat' => 40.60,
+        ]);
+
+    if ($response->failed()) {
+        return response()->json([
+            'message' => 'ORS Error',
+            'details' => $response->json()
+        ], 502);
+    }
+
+    $results = collect($response->json()['features'] ?? [])->map(function ($f) {
+        return [
+            'text' => $f['properties']['label'] ?? $f['properties']['name'] ?? 'Ubicación',
+            'lon'  => $f['geometry']['coordinates'][0],
+            'lat'  => $f['geometry']['coordinates'][1],
+        ];
+    });
+
+    return response()->json(['results' => $results]);
+}
 
     /**
      * Vista previa de ruta (Sin guardar en historial).
