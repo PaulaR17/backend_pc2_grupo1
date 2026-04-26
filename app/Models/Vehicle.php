@@ -17,11 +17,19 @@ class Vehicle extends Model
         'vehicle_label_id',
         'type',
         'nickname',
+        'brand',
+        'model',
+        'year',
+        'plate',
+        'fuel_type',
+        'color_hex',
+        'color_name',
         'is_electric',
         'is_default',
     ];
 
     protected $casts = [
+        'year' => 'integer',
         'is_electric' => 'boolean',
         'is_default' => 'boolean',
     ];

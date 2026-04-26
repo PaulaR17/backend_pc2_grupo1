@@ -13,76 +13,325 @@ class RouteController extends Controller
     public function searchLocation(Request $request)
     {
         $q = trim((string) $request->query('q'));
-        $limit = max(1, min((int) $request->query('limit', 5), 10));
+        $limit = max(1, min((int) $request->query('limit', 6), 10));
 
         if (!$q || mb_strlen($q) < 2) {
             return response()->json([
-                'message' => 'q is required (min 2 chars)'
-            ], 422);
+                'query' => $q,
+                'results' => $this->popularMadridZones(),
+            ]);
         }
 
-        $apiKey = env('ORS_API_KEY');
+        $localResults = $this->localMadridSuggestions($q);
+        $orsResults = $this->orsLocationSuggestions($q, $limit);
 
-        if (!$apiKey) {
-            return response()->json([
-                'error' => 'server_misconfigured',
-                'message' => 'ORS_API_KEY is missing in .env',
-            ], 500);
-        }
-
-        $response = Http::withHeaders([
-            'Authorization' => $apiKey,
-        ])->get('https://api.openrouteservice.org/geocode/search', [
-            'text' => $q . ', Madrid, España',
-            'size' => $limit,
-            'lang' => 'es',
-
-            // Centro de Madrid para priorizar resultados cercanos.
-            'focus.point.lat' => 40.4167,
-            'focus.point.lon' => -3.7033,
-
-            // Rectángulo aproximado de Madrid y alrededores.
-            'boundary.rect.min_lon' => -3.95,
-            'boundary.rect.min_lat' => 40.25,
-            'boundary.rect.max_lon' => -3.45,
-            'boundary.rect.max_lat' => 40.65,
-
-            'boundary.country' => 'ES',
-        ]);
-
-        if ($response->failed()) {
-            return response()->json([
-                'message' => 'ORS geocoding error',
-                'status' => $response->status(),
-                'details' => $response->json(),
-            ], 502);
-        }
-
-        $features = $response->json()['features'] ?? [];
-
-        $results = collect($features)->map(function ($feature) {
-            $properties = $feature['properties'] ?? [];
-            $coordinates = $feature['geometry']['coordinates'] ?? [null, null];
-
-            return [
-                'id' => $properties['id'] ?? null,
-                'text' => $properties['label'] ?? $properties['name'] ?? 'Ubicación',
-                'name' => $properties['name'] ?? null,
-                'type' => $properties['layer'] ?? null,
-                'district' => $properties['localadmin'] ?? $properties['county'] ?? null,
-                'region' => $properties['region'] ?? null,
-                'country' => $properties['country'] ?? null,
-                'lon' => $coordinates[0],
-                'lat' => $coordinates[1],
-            ];
-        })->filter(function ($result) {
-            return $result['lat'] !== null && $result['lon'] !== null;
-        })->values();
+        $merged = collect($localResults)
+            ->merge($orsResults)
+            ->unique(function ($item) {
+                return strtolower($item['text']) . '|' . round($item['lat'], 5) . '|' . round($item['lon'], 5);
+            })
+            ->take($limit)
+            ->values();
 
         return response()->json([
             'query' => $q,
-            'results' => $results,
+            'results' => $merged,
         ]);
+    }
+
+    private function orsLocationSuggestions(string $query, int $limit)
+{
+    $apiKey = env('ORS_API_KEY');
+
+    if (!$apiKey) {
+        return collect([]);
+    }
+
+    $response = Http::withHeaders([
+        'Authorization' => $apiKey,
+    ])->get('https://api.openrouteservice.org/geocode/search', [
+        'text' => $query . ', Madrid, España',
+        'size' => $limit,
+        'lang' => 'es',
+        'focus.point.lat' => 40.4167,
+        'focus.point.lon' => -3.7033,
+        'boundary.rect.min_lon' => -3.95,
+        'boundary.rect.min_lat' => 40.25,
+        'boundary.rect.max_lon' => -3.45,
+        'boundary.rect.max_lat' => 40.65,
+        'boundary.country' => 'ES',
+    ]);
+
+    if ($response->failed()) {
+        return collect([]);
+    }
+
+    $features = $response->json()['features'] ?? [];
+
+    return collect($features)->map(function ($feature) {
+        $properties = $feature['properties'] ?? [];
+        $coordinates = $feature['geometry']['coordinates'] ?? [null, null];
+
+        $label = $properties['label'] ?? $properties['name'] ?? 'Ubicación';
+        $name = $properties['name'] ?? $label;
+
+        return [
+            'id' => $properties['id'] ?? null,
+            'text' => $label,
+            'name' => $name,
+            'type' => $properties['layer'] ?? 'ors',
+            'district' => $properties['localadmin'] ?? $properties['county'] ?? null,
+            'region' => $properties['region'] ?? 'Madrid',
+            'country' => $properties['country'] ?? 'España',
+            'lon' => $coordinates[0],
+            'lat' => $coordinates[1],
+        ];
+    })->filter(function ($result) {
+        if ($result['lat'] === null || $result['lon'] === null) {
+            return false;
+        }
+
+
+        return str_contains(mb_strtolower($result['text']), 'madrid');
+    })->values();
+}
+
+    private function localMadridSuggestions(string $query)
+    {
+        $normalizedQuery = mb_strtolower($query);
+
+        return collect($this->popularMadridZones())
+            ->filter(function ($zone) use ($normalizedQuery) {
+                return str_contains(mb_strtolower($zone['name']), $normalizedQuery)
+                    || str_contains(mb_strtolower($zone['text']), $normalizedQuery);
+            })
+            ->values();
+    }
+
+    private function popularMadridZones()
+    {
+        return [
+            [
+                'id' => 'local-centro',
+                'text' => 'Centro, Madrid, España',
+                'name' => 'Centro',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4150,
+                'lon' => -3.7074,
+            ],
+            [
+                'id' => 'local-arganzuela',
+                'text' => 'Arganzuela, Madrid, España',
+                'name' => 'Arganzuela',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.3982,
+                'lon' => -3.6950,
+            ],
+            [
+                'id' => 'local-retiro',
+                'text' => 'Retiro, Madrid, España',
+                'name' => 'Retiro',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4115,
+                'lon' => -3.6782,
+            ],
+            [
+                'id' => 'local-salamanca',
+                'text' => 'Salamanca, Madrid, España',
+                'name' => 'Salamanca',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4270,
+                'lon' => -3.6812,
+            ],
+            [
+                'id' => 'local-chamartin',
+                'text' => 'Chamartín, Madrid, España',
+                'name' => 'Chamartín',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4593,
+                'lon' => -3.6761,
+            ],
+            [
+                'id' => 'local-tetuan',
+                'text' => 'Tetuán, Madrid, España',
+                'name' => 'Tetuán',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4598,
+                'lon' => -3.6975,
+            ],
+            [
+                'id' => 'local-chamberi',
+                'text' => 'Chamberí, Madrid, España',
+                'name' => 'Chamberí',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4340,
+                'lon' => -3.7038,
+            ],
+            [
+                'id' => 'local-moncloa',
+                'text' => 'Moncloa-Aravaca, Madrid, España',
+                'name' => 'Moncloa-Aravaca',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4352,
+                'lon' => -3.7313,
+            ],
+            [
+                'id' => 'local-latina',
+                'text' => 'Latina, Madrid, España',
+                'name' => 'Latina',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4037,
+                'lon' => -3.7368,
+            ],
+            [
+                'id' => 'local-carabanchel',
+                'text' => 'Carabanchel, Madrid, España',
+                'name' => 'Carabanchel',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.3818,
+                'lon' => -3.7279,
+            ],
+            [
+                'id' => 'local-usera',
+                'text' => 'Usera, Madrid, España',
+                'name' => 'Usera',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.3826,
+                'lon' => -3.7097,
+            ],
+            [
+                'id' => 'local-puente-vallecas',
+                'text' => 'Puente de Vallecas, Madrid, España',
+                'name' => 'Puente de Vallecas',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.3869,
+                'lon' => -3.6667,
+            ],
+            [
+                'id' => 'local-moratalaz',
+                'text' => 'Moratalaz, Madrid, España',
+                'name' => 'Moratalaz',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4072,
+                'lon' => -3.6570,
+            ],
+            [
+                'id' => 'local-ciudad-lineal',
+                'text' => 'Ciudad Lineal, Madrid, España',
+                'name' => 'Ciudad Lineal',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4457,
+                'lon' => -3.6510,
+            ],
+            [
+                'id' => 'local-hortaleza',
+                'text' => 'Hortaleza, Madrid, España',
+                'name' => 'Hortaleza',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4744,
+                'lon' => -3.6411,
+            ],
+            [
+                'id' => 'local-villaverde',
+                'text' => 'Villaverde, Madrid, España',
+                'name' => 'Villaverde',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.3459,
+                'lon' => -3.7114,
+            ],
+            [
+                'id' => 'local-vicalvaro',
+                'text' => 'Vicálvaro, Madrid, España',
+                'name' => 'Vicálvaro',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4042,
+                'lon' => -3.6081,
+            ],
+            [
+                'id' => 'local-san-blas',
+                'text' => 'San Blas-Canillejas, Madrid, España',
+                'name' => 'San Blas-Canillejas',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4289,
+                'lon' => -3.6097,
+            ],
+            [
+                'id' => 'local-barajas',
+                'text' => 'Barajas, Madrid, España',
+                'name' => 'Barajas',
+                'type' => 'district',
+                'district' => 'Madrid',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4737,
+                'lon' => -3.5796,
+            ],
+            [
+                'id' => 'local-parque-retiro',
+                'text' => 'Parque de El Retiro, Madrid, España',
+                'name' => 'Parque de El Retiro',
+                'type' => 'poi',
+                'district' => 'Retiro',
+                'region' => 'Madrid',
+                'country' => 'España',
+                'lat' => 40.4153,
+                'lon' => -3.6844,
+            ],
+        ];
     }
 
     public function preview(Request $request)
