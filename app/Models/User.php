@@ -65,20 +65,18 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(Transaction::class, 'user_id', 'id');
     }
 
+    public function getAuthPassword()
+    {
+        return $this->password_hash;
+    }
+
     public function getJWTIdentifier()
     {
-        $id = $this->getKey();
-        return $id;
+        return $this->getKey();
     }
 
     public function getJWTCustomClaims()
     {
-        $claims = [];
-        return $claims;
-    }
-
-    public function getAuthPassword()
-    {
-    return $this->password_hash;
+        return [];
     }
 }

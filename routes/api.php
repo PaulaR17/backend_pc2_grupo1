@@ -13,6 +13,7 @@ use App\Http\Controllers\ItemController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\PoiController;
+use App\Http\Controllers\AuthController;
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -107,4 +108,9 @@ Route::prefix('admin')
     });
 
 //autenticación
-Route::post('/login', [App\Http\Controllers\AuthController::class, 'login']);
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login', [AuthController::class, 'login']);
+Route::middleware('jwt.auth')->group(function () {
+    Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/logout', [AuthController::class, 'logout']);
+});
