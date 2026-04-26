@@ -8,51 +8,52 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
-
     public function dashboard()
     {
         return response()->json([
             'users_total' => User::count(),
             'users_active' => User::where('status', true)->count(),
+            'users_inactive' => User::where('status', false)->count(),
+            'incidents_total' => Incident::count(),
             'incidents_active' => Incident::where('active', true)->count(),
         ]);
     }
 
-
     public function users()
     {
-        return response()->json(User::orderBy('id')->get());
+        return response()->json(
+            User::orderBy('id')->get()
+        );
     }
 
-    
-    public function userDetail(User $userId)
+    public function userDetail(User $user)
     {
-        return response()->json($userId->load(['profile', 'vehicles']));
+        return response()->json(
+            $user->load(['profile', 'vehicles'])
+        );
     }
 
-
-    public function updateUser(Request $request, User $userId)
+    public function updateUser(Request $request, User $user)
     {
         $data = $request->validate([
             'name' => 'sometimes|string|max:100',
-            'mail' => 'sometimes|email|max:100',
+            'mail' => 'sometimes|email|max:100|unique:users,mail,' . $user->id,
             'rol' => 'sometimes|in:USER,ADMIN',
             'status' => 'sometimes|boolean',
         ]);
 
-        $userId->update($data);
+        $user->update($data);
 
-        return response()->json($userId);
+        return response()->json($user);
     }
 
-    
-    public function deactivateUser(User $userId)
+    public function deactivateUser(User $user)
     {
-        $userId->update(['status' => false]);
+        $user->update(['status' => false]);
+
         return response()->json(['ok' => true]);
     }
 
- 
     public function createIncident(Request $request)
     {
         $data = $request->validate([
@@ -65,11 +66,11 @@ class AdminController extends Controller
         ]);
 
         $incident = Incident::create($data);
+
         return response()->json($incident, 201);
     }
 
-
-    public function updateIncident(Request $request, Incident $incidentId)
+    public function updateIncident(Request $request, Incident $incident)
     {
         $data = $request->validate([
             'type' => 'sometimes|in:ACCIDENT,ROADWORK,EVENT',
@@ -80,25 +81,26 @@ class AdminController extends Controller
             'description' => 'sometimes|string|max:1000',
         ]);
 
-        $incidentId->update($data);
+        $incident->update($data);
 
-        return response()->json($incidentId);
+        return response()->json($incident);
     }
 
-    
-    public function deleteIncident(Incident $incidentId)
+    public function deleteIncident(Incident $incident)
     {
-        $incidentId->update(['active' => false]);
+        $incident->update(['active' => false]);
 
-        return response()->json(['ok' => true, 'deleted' => true]);
+        return response()->json([
+            'ok' => true,
+            'deleted' => true,
+        ]);
     }
 
- 
     public function runPredictions()
     {
         return response()->json([
-            'ok' => true, 
-            'message' => 'calculo de predicciones done.'
+            'ok' => true,
+            'message' => 'Cálculo de predicciones ejecutado correctamente.',
         ]);
     }
 }
