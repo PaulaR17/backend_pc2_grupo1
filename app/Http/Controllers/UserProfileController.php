@@ -8,21 +8,25 @@ use Illuminate\Http\Request;
 
 class UserProfileController extends Controller
 {
+    //devuelve el perfil del usuario o una plantilla vacia si no existe
     public function show(User $user)
     {
         $this->authorizeUserAccess($user);
 
         $profile = UserProfile::where('user_id', $user->id)->first();
 
-        return response()->json($profile ?? [
+        $resultado = $profile ?? [
             'user_id' => $user->id,
             'home_lat' => null,
             'home_lon' => null,
             'work_lat' => null,
             'work_lon' => null,
-        ]);
+        ];
+
+        return response()->json($resultado);
     }
 
+    //guarda la direccion de casa del usuario
     public function setHome(Request $request, User $user)
     {
         $this->authorizeUserAccess($user);
@@ -40,6 +44,7 @@ class UserProfileController extends Controller
         return response()->json($profile);
     }
 
+    //guarda la direccion del trabajo
     public function setWork(Request $request, User $user)
     {
         $this->authorizeUserAccess($user);
@@ -57,6 +62,7 @@ class UserProfileController extends Controller
         return response()->json($profile);
     }
 
+    //borra la direccion de casa
     public function clearHome(User $user)
     {
         $this->authorizeUserAccess($user);
@@ -72,6 +78,7 @@ class UserProfileController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    //borra la direccion del trabajo
     public function clearWork(User $user)
     {
         $this->authorizeUserAccess($user);
@@ -87,19 +94,15 @@ class UserProfileController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    //solo deja pasar al ADMIN o al dueño del perfil
     private function authorizeUserAccess(User $user): void
     {
         $authenticatedUser = auth()->user();
 
         if (!$authenticatedUser) {
             abort(401, 'Usuario no autenticado.');
-        }
-
-        if ($authenticatedUser->rol === 'ADMIN') {
-            return;
-        }
-
-        if ((int) $authenticatedUser->id !== (int) $user->id) {
+        } else if ($authenticatedUser->rol !== 'ADMIN'
+            && (int) $authenticatedUser->id !== (int) $user->id) {
             abort(403, 'No tienes permiso para acceder a este perfil.');
         }
     }

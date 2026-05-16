@@ -8,31 +8,37 @@ use Illuminate\Http\Request;
 
 class AdminController extends Controller
 {
+    //contadores para el panel de admin
     public function dashboard()
     {
-        return response()->json([
+        $resumen = [
             'users_total' => User::count(),
             'users_active' => User::where('status', true)->count(),
             'users_inactive' => User::where('status', false)->count(),
             'incidents_total' => Incident::count(),
             'incidents_active' => Incident::where('active', true)->count(),
-        ]);
+        ];
+
+        return response()->json($resumen);
     }
 
+    //todos los usuarios
     public function users()
     {
-        return response()->json(
-            User::orderBy('id')->get()
-        );
+        $usuarios = User::orderBy('id')->get();
+
+        return response()->json($usuarios);
     }
 
+    //ficha del usuario con perfil y vehiculos
     public function userDetail(User $user)
     {
-        return response()->json(
-            $user->load(['profile', 'vehicles'])
-        );
+        $usuario = $user->load(['profile', 'vehicles']);
+
+        return response()->json($usuario);
     }
 
+    //edita un usuario desde el admin
     public function updateUser(Request $request, User $user)
     {
         $data = $request->validate([
@@ -47,6 +53,7 @@ class AdminController extends Controller
         return response()->json($user);
     }
 
+    //da de baja al usuario sin borrarlo
     public function deactivateUser(User $user)
     {
         $user->update(['status' => false]);
@@ -54,6 +61,7 @@ class AdminController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    //alta de incidencia en el mapa
     public function createIncident(Request $request)
     {
         $data = $request->validate([
@@ -70,6 +78,7 @@ class AdminController extends Controller
         return response()->json($incident, 201);
     }
 
+    //edita una incidencia
     public function updateIncident(Request $request, Incident $incident)
     {
         $data = $request->validate([
@@ -86,6 +95,7 @@ class AdminController extends Controller
         return response()->json($incident);
     }
 
+    //borrado logico, deja la incidencia en BD pero inactiva
     public function deleteIncident(Incident $incident)
     {
         $incident->update(['active' => false]);
@@ -96,9 +106,7 @@ class AdminController extends Controller
         ]);
     }
 
-    // Ejecuta el comando Artisan que lanza el script Python de PC1.
-    // El script genera predicciones para los próximos 7 días y las inserta
-    // en la tabla `predictions` (que el frontend consume desde el mapa).
+    //lanza el script de PC1 para llenar la tabla predictions
     public function runPredictions(\Illuminate\Http\Request $request)
     {
         $target = $request->input('target', 'Accidentes');
@@ -114,12 +122,14 @@ class AdminController extends Controller
         $salida = \Illuminate\Support\Facades\Artisan::output();
         $ok = $exitCode === 0;
 
-        return response()->json([
+        $respuesta = response()->json([
             'ok'      => $ok,
             'message' => $ok
                 ? 'Predicciones ejecutadas correctamente.'
                 : 'Error ejecutando las predicciones (revisa los logs).',
             'output'  => $salida,
         ], $ok ? 200 : 500);
+
+        return $respuesta;
     }
 }

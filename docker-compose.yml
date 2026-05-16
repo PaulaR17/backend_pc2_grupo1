@@ -1,0 +1,90 @@
+#docker-compose para PC2 + PC1 corriendo todo dentro de una sola maquina (LORCA).
+#
+#requisitos previos: los 3 repos clonados como hermanos:
+#   /home/grupo1/proyecto/Proyecto-de-Computacion-I/   <- PC1
+#   /home/grupo1/proyecto/backend/                     <- este repo
+#   /home/grupo1/proyecto/frontend/frontend_pc2_grupo1/ <- frontend Angular
+#
+#tambien necesitas un .env al lado de este docker-compose con:
+#   AEMET_API_KEY=...
+#
+#desde /home/grupo1/proyecto/backend/ ejecutar:
+#   docker compose up -d --build       (levanta todo)
+#   docker compose logs -f backend     (ver logs de la API)
+#   docker compose exec backend php artisan predictions:run   (forzar predicciones)
+#   docker compose exec backend /opt/pc1/.venv/bin/python /opt/pc1/run_all.py   (entrenar)
+#   docker compose down                (parar todo)
+
+services:
+
+  #base de datos PostgreSQL, persistente con volumen para no perder datos al reiniciar
+  postgres:
+    image: postgres:14-alpine
+    container_name: pc2_postgres
+    environment:
+      POSTGRES_DB: pc2_grupo1
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d pc2_grupo1"]
+      interval: 5s
+      retries: 10
+
+  #backend Laravel + PC1 (Python) en el mismo container. PC1 vive montado
+  #como volumen para que el comando `php artisan predictions:run` pueda
+  #ejecutarlo directamente con exec(), sin necesidad de hablar con otro container.
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pc2_backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: pc2_grupo1
+      DB_USERNAME: root
+      DB_PASSWORD: root
+      APP_ENV: production
+      APP_DEBUG: "false"
+      APP_URL: http://localhost
+      #PC1 corre en el propio container (Python instalado en el Dockerfile)
+      ML_USE_SSH: "false"
+      ML_PROJECT_PATH: /opt/pc1
+      ML_PYTHON_BIN: /opt/pc1/.venv/bin/python
+      #PC1 lee estas para conectar a postgres
+      PC2_DB_HOST: postgres
+      PC2_DB_PORT: 5432
+      PC2_DB_NAME: pc2_grupo1
+      PC2_DB_USER: root
+      PC2_DB_PASSWORD: root
+      AEMET_API_KEY: ${AEMET_API_KEY:-}
+    volumes:
+      #PC1 montado en /opt/pc1: asi el venv se crea en el host y persiste
+      - ../Proyecto-de-Computacion-I:/opt/pc1
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+
+  #frontend Angular servido por nginx en :80
+  frontend:
+    build:
+      context: ../frontend/frontend_pc2_grupo1
+      dockerfile: Dockerfile
+    container_name: pc2_frontend
+    depends_on:
+      - backend
+    ports:
+      - "80:80"
+    restart: unless-stopped
+
+volumes:
+  pgdata:

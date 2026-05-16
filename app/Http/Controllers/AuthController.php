@@ -9,6 +9,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    //registro de usuario con token JWT directo
     public function register(Request $request)
     {
         $data = $request->validate([
@@ -27,7 +28,7 @@ class AuthController extends Controller
 
         $token = auth()->login($user);
 
-        return response()->json([
+        $respuesta = response()->json([
             'message' => 'Usuario registrado correctamente',
             'user' => [
                 'id' => $user->id,
@@ -40,8 +41,11 @@ class AuthController extends Controller
             'token_type' => 'bearer',
             'expires_in' => auth()->factory()->getTTL() * 60,
         ], 201);
+
+        return $respuesta;
     }
 
+    //login con email y contraseña, devuelve JWT
     public function login(Request $request)
     {
         $data = $request->validate([
@@ -55,37 +59,42 @@ class AuthController extends Controller
         ];
 
         $token = auth()->attempt($credentials);
+        $respuesta = null;
 
         if (!$token) {
+            //asi el front recibe el error con el formato de validacion de Laravel
             throw ValidationException::withMessages([
                 'mail' => ['Credenciales incorrectas.'],
             ]);
+        } else {
+            $user = auth()->user();
+
+            if (!$user->status) {
+                $respuesta = response()->json([
+                    'error' => 'user_inactive',
+                    'message' => 'Este usuario está desactivado.',
+                ], 403);
+            } else {
+                $respuesta = response()->json([
+                    'message' => 'Login correcto',
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'mail' => $user->mail,
+                        'rol' => $user->rol,
+                        'status' => $user->status,
+                    ],
+                    'access_token' => $token,
+                    'token_type' => 'bearer',
+                    'expires_in' => auth()->factory()->getTTL() * 60,
+                ]);
+            }
         }
 
-        $user = auth()->user();
-
-        if (!$user->status) {
-            return response()->json([
-                'error' => 'user_inactive',
-                'message' => 'Este usuario está desactivado.',
-            ], 403);
-        }
-
-        return response()->json([
-            'message' => 'Login correcto',
-            'user' => [
-                'id' => $user->id,
-                'name' => $user->name,
-                'mail' => $user->mail,
-                'rol' => $user->rol,
-                'status' => $user->status,
-            ],
-            'access_token' => $token,
-            'token_type' => 'bearer',
-            'expires_in' => auth()->factory()->getTTL() * 60,
-        ]);
+        return $respuesta;
     }
 
+    //datos del usuario logueado
     public function me()
     {
         $user = auth()->user();
@@ -99,6 +108,7 @@ class AuthController extends Controller
         ]);
     }
 
+    //cierra la sesion JWT
     public function logout()
     {
         auth()->logout();

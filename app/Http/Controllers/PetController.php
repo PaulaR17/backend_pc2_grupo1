@@ -8,10 +8,7 @@ use Illuminate\Http\Request;
 
 class PetController extends Controller
 {
-    // Devuelve la mascota del usuario.
-    // Si no existe, crea una con valores por defecto
-    // para que el frontend nunca reciba un 404 al entrar
-    // por primera vez en la página "Mi mascota".
+    //mascota del usuario, la crea con valores por defecto si no existia
     public function show(int $userId)
     {
         User::findOrFail($userId);
@@ -31,8 +28,7 @@ class PetController extends Controller
         return response()->json($pet);
     }
 
-    // Actualiza los datos de la mascota del usuario.
-    // Si por alguna razón no existe aún, la crea.
+    //actualiza la mascota del usuario o la crea si no existe
     public function update(Request $request, int $userId)
     {
         User::findOrFail($userId);

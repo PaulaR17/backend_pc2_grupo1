@@ -10,104 +10,115 @@ use Illuminate\Support\Facades\Http;
 
 class RouteController extends Controller
 {
+    //autocompletado mezclando distritos locales y geocode de ORS
     public function searchLocation(Request $request)
     {
         $q = trim((string) $request->query('q'));
         $limit = max(1, min((int) $request->query('limit', 6), 10));
+        $respuesta = null;
 
         if (!$q || mb_strlen($q) < 2) {
-            return response()->json([
+            $respuesta = response()->json([
                 'query' => $q,
                 'results' => $this->popularMadridZones(),
             ]);
+        } else {
+            $localResults = $this->localMadridSuggestions($q);
+            $orsResults = $this->orsLocationSuggestions($q, $limit);
+
+            $merged = collect($localResults)
+                ->merge($orsResults)
+                ->unique(function ($item) {
+                    //clave para detectar duplicados: texto + coords redondeadas
+                    return strtolower($item['text']) . '|' . round($item['lat'], 5) . '|' . round($item['lon'], 5);
+                })
+                ->take($limit)
+                ->values();
+
+            $respuesta = response()->json([
+                'query' => $q,
+                'results' => $merged,
+            ]);
         }
 
-        $localResults = $this->localMadridSuggestions($q);
-        $orsResults = $this->orsLocationSuggestions($q, $limit);
-
-        $merged = collect($localResults)
-            ->merge($orsResults)
-            ->unique(function ($item) {
-                return strtolower($item['text']) . '|' . round($item['lat'], 5) . '|' . round($item['lon'], 5);
-            })
-            ->take($limit)
-            ->values();
-
-        return response()->json([
-            'query' => $q,
-            'results' => $merged,
-        ]);
+        return $respuesta;
     }
 
+    //llama al geocode de ORS limitado a Madrid
     private function orsLocationSuggestions(string $query, int $limit)
-{
-    $apiKey = env('ORS_API_KEY');
+    {
+        $apiKey = env('ORS_API_KEY');
+        $resultado = collect([]);
 
-    if (!$apiKey) {
-        return collect([]);
-    }
+        if ($apiKey) {
+            $response = Http::withHeaders([
+                'Authorization' => $apiKey,
+            ])->get('https://api.openrouteservice.org/geocode/search', [
+                'text' => $query . ', Madrid, España',
+                'size' => $limit,
+                'lang' => 'es',
+                'focus.point.lat' => 40.4167,
+                'focus.point.lon' => -3.7033,
+                'boundary.rect.min_lon' => -3.95,
+                'boundary.rect.min_lat' => 40.25,
+                'boundary.rect.max_lon' => -3.45,
+                'boundary.rect.max_lat' => 40.65,
+                'boundary.country' => 'ES',
+            ]);
 
-    $response = Http::withHeaders([
-        'Authorization' => $apiKey,
-    ])->get('https://api.openrouteservice.org/geocode/search', [
-        'text' => $query . ', Madrid, España',
-        'size' => $limit,
-        'lang' => 'es',
-        'focus.point.lat' => 40.4167,
-        'focus.point.lon' => -3.7033,
-        'boundary.rect.min_lon' => -3.95,
-        'boundary.rect.min_lat' => 40.25,
-        'boundary.rect.max_lon' => -3.45,
-        'boundary.rect.max_lat' => 40.65,
-        'boundary.country' => 'ES',
-    ]);
+            if (!$response->failed()) {
+                $features = $response->json()['features'] ?? [];
 
-    if ($response->failed()) {
-        return collect([]);
-    }
+                $resultado = collect($features)->map(function ($feature) {
+                    $properties = $feature['properties'] ?? [];
+                    $coordinates = $feature['geometry']['coordinates'] ?? [null, null];
 
-    $features = $response->json()['features'] ?? [];
+                    $label = $properties['label'] ?? $properties['name'] ?? 'Ubicación';
+                    $name = $properties['name'] ?? $label;
 
-    return collect($features)->map(function ($feature) {
-        $properties = $feature['properties'] ?? [];
-        $coordinates = $feature['geometry']['coordinates'] ?? [null, null];
+                    return [
+                        'id' => $properties['id'] ?? null,
+                        'text' => $label,
+                        'name' => $name,
+                        'type' => $properties['layer'] ?? 'ors',
+                        'district' => $properties['localadmin'] ?? $properties['county'] ?? null,
+                        'region' => $properties['region'] ?? 'Madrid',
+                        'country' => $properties['country'] ?? 'España',
+                        'lon' => $coordinates[0],
+                        'lat' => $coordinates[1],
+                    ];
+                })->filter(function ($result) {
+                    //solo dejamos ubicaciones en Madrid con coordenadas validas
+                    $valido = $result['lat'] !== null
+                        && $result['lon'] !== null
+                        && str_contains(mb_strtolower($result['text']), 'madrid');
 
-        $label = $properties['label'] ?? $properties['name'] ?? 'Ubicación';
-        $name = $properties['name'] ?? $label;
-
-        return [
-            'id' => $properties['id'] ?? null,
-            'text' => $label,
-            'name' => $name,
-            'type' => $properties['layer'] ?? 'ors',
-            'district' => $properties['localadmin'] ?? $properties['county'] ?? null,
-            'region' => $properties['region'] ?? 'Madrid',
-            'country' => $properties['country'] ?? 'España',
-            'lon' => $coordinates[0],
-            'lat' => $coordinates[1],
-        ];
-    })->filter(function ($result) {
-        if ($result['lat'] === null || $result['lon'] === null) {
-            return false;
+                    return $valido;
+                })->values();
+            }
         }
 
+        return $resultado;
+    }
 
-        return str_contains(mb_strtolower($result['text']), 'madrid');
-    })->values();
-}
-
+    //busca dentro de los distritos predefinidos
     private function localMadridSuggestions(string $query)
     {
         $normalizedQuery = mb_strtolower($query);
 
-        return collect($this->popularMadridZones())
+        $resultado = collect($this->popularMadridZones())
             ->filter(function ($zone) use ($normalizedQuery) {
-                return str_contains(mb_strtolower($zone['name']), $normalizedQuery)
+                $coincide = str_contains(mb_strtolower($zone['name']), $normalizedQuery)
                     || str_contains(mb_strtolower($zone['text']), $normalizedQuery);
+
+                return $coincide;
             })
             ->values();
+
+        return $resultado;
     }
 
+    //distritos y zonas populares de Madrid hardcodeados
     private function popularMadridZones()
     {
         return [
@@ -334,6 +345,7 @@ class RouteController extends Controller
         ];
     }
 
+    //previsualiza una ruta sin guardarla en historial
     public function preview(Request $request)
     {
         $data = $request->validate([
@@ -355,22 +367,27 @@ class RouteController extends Controller
             in_array('extras', $include)
         );
 
+        $respuesta = null;
+
         if (isset($ors['error'])) {
-            return response()->json($ors, 502);
+            $respuesta = response()->json($ors, 502);
+        } else {
+            $route0 = $ors['routes'][0] ?? null;
+
+            if (!$route0) {
+                $respuesta = response()->json([
+                    'message' => 'No route found',
+                    'details' => $ors,
+                ], 404);
+            } else {
+                $respuesta = response()->json($this->buildRouteResponse($route0, $include));
+            }
         }
 
-        $route0 = $ors['routes'][0] ?? null;
-
-        if (!$route0) {
-            return response()->json([
-                'message' => 'No route found',
-                'details' => $ors,
-            ], 404);
-        }
-
-        return response()->json($this->buildRouteResponse($route0, $include));
+        return $respuesta;
     }
 
+    //calcula la ruta y la guarda en el historial
     public function calculate(Request $request)
     {
         $data = $request->validate([
@@ -393,47 +410,54 @@ class RouteController extends Controller
             false
         );
 
+        $respuesta = null;
+
         if (isset($ors['error'])) {
-            return response()->json($ors, 502);
+            $respuesta = response()->json($ors, 502);
+        } else {
+            $route0 = $ors['routes'][0] ?? null;
+
+            if (!$route0) {
+                $respuesta = response()->json([
+                    'message' => 'No route found',
+                    'details' => $ors,
+                ], 404);
+            } else {
+                $history = History::create([
+                    'user_id' => $data['user_id'],
+                    'origin_lat' => $data['origin']['lat'],
+                    'origin_lon' => $data['origin']['lon'],
+                    'dest_lat' => $data['destination']['lat'],
+                    'dest_lon' => $data['destination']['lon'],
+                    'distance_km' => round(($route0['summary']['distance'] ?? 0) / 1000, 2),
+                    'duration_min' => round(($route0['summary']['duration'] ?? 0) / 60, 2),
+                ]);
+
+                $out = $this->buildRouteResponse($route0, $include);
+                $out['history_id'] = $history->id;
+
+                $respuesta = response()->json($out, 201);
+            }
         }
 
-        $route0 = $ors['routes'][0] ?? null;
-
-        if (!$route0) {
-            return response()->json([
-                'message' => 'No route found',
-                'details' => $ors,
-            ], 404);
-        }
-
-        $history = History::create([
-            'user_id' => $data['user_id'],
-            'origin_lat' => $data['origin']['lat'],
-            'origin_lon' => $data['origin']['lon'],
-            'dest_lat' => $data['destination']['lat'],
-            'dest_lon' => $data['destination']['lon'],
-            'distance_km' => round(($route0['summary']['distance'] ?? 0) / 1000, 2),
-            'duration_min' => round(($route0['summary']['duration'] ?? 0) / 60, 2),
-        ]);
-
-        $out = $this->buildRouteResponse($route0, $include);
-        $out['history_id'] = $history->id;
-
-        return response()->json($out, 201);
+        return $respuesta;
     }
 
+    //ficha de una entrada del historial
     public function detail(History $historyId)
     {
         return response()->json($historyId);
     }
 
+    //historial de rutas, las nuevas arriba
     public function history(User $userId)
     {
-        return response()->json(
-            $userId->history()->orderByDesc('created_at')->get()
-        );
+        $rows = $userId->history()->orderByDesc('created_at')->get();
+
+        return response()->json($rows);
     }
 
+    //borra una entrada del historial del usuario
     public function deleteHistory(User $userId, History $historyId)
     {
         if ($historyId->user_id !== $userId->id) {
@@ -445,13 +469,15 @@ class RouteController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    //favoritos del usuario con su entrada de historial
     public function favorites(User $userId)
     {
-        return response()->json(
-            $userId->favorites()->with('history')->get()
-        );
+        $rows = $userId->favorites()->with('history')->get();
+
+        return response()->json($rows);
     }
 
+    //añade una ruta a favoritos sin duplicar
     public function addFavorite(Request $request, User $userId)
     {
         $data = $request->validate([
@@ -466,6 +492,7 @@ class RouteController extends Controller
         return response()->json($favorite, 201);
     }
 
+    //quita un favorito del usuario
     public function removeFavorite(User $userId, Favorite $favoriteId)
     {
         if ($favoriteId->user_id !== $userId->id) {
@@ -477,41 +504,46 @@ class RouteController extends Controller
         return response()->json(['ok' => true]);
     }
 
+    //llamada al directions de ORS
     private function callOrsDirections($profile, $origin, $destination, $steps, $geom, $extras)
     {
         $apiKey = env('ORS_API_KEY');
+        $resultado = null;
 
         if (!$apiKey) {
-            return [
+            $resultado = [
                 'error' => 'server_misconfigured',
                 'message' => 'ORS_API_KEY is missing in .env',
             ];
+        } else {
+            $response = Http::withHeaders([
+                'Authorization' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post("https://api.openrouteservice.org/v2/directions/{$profile}/json", [
+                'coordinates' => [
+                    [(float) $origin['lon'], (float) $origin['lat']],
+                    [(float) $destination['lon'], (float) $destination['lat']],
+                ],
+                'instructions' => $steps,
+                'language' => 'es',
+                'geometry' => $geom,
+            ]);
+
+            if ($response->failed()) {
+                $resultado = [
+                    'error' => 'ors_error',
+                    'status' => $response->status(),
+                    'details' => $response->json(),
+                ];
+            } else {
+                $resultado = $response->json();
+            }
         }
 
-        $response = Http::withHeaders([
-            'Authorization' => $apiKey,
-            'Content-Type' => 'application/json',
-        ])->post("https://api.openrouteservice.org/v2/directions/{$profile}/json", [
-            'coordinates' => [
-                [(float) $origin['lon'], (float) $origin['lat']],
-                [(float) $destination['lon'], (float) $destination['lat']],
-            ],
-            'instructions' => $steps,
-            'language' => 'es',
-            'geometry' => $geom,
-        ]);
-
-        if ($response->failed()) {
-            return [
-                'error' => 'ors_error',
-                'status' => $response->status(),
-                'details' => $response->json(),
-            ];
-        }
-
-        return $response->json();
+        return $resultado;
     }
 
+    //monta la respuesta segun los bloques que pida el cliente
     private function buildRouteResponse($route, $include)
     {
         $out = [];

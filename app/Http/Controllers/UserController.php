@@ -7,15 +7,17 @@ use Illuminate\Http\Request;
 
 class UserController extends Controller
 {
+    //datos del usuario con perfil y vehiculos
     public function show(User $user)
     {
         $this->authorizeUserAccess($user);
 
-        return response()->json(
-            $user->load(['profile', 'vehicles'])
-        );
+        $usuario = $user->load(['profile', 'vehicles']);
+
+        return response()->json($usuario);
     }
 
+    //edita nombre o email del usuario
     public function update(Request $request, User $user)
     {
         $this->authorizeUserAccess($user);
@@ -27,11 +29,12 @@ class UserController extends Controller
 
         $user->update($data);
 
-        return response()->json(
-            $user->fresh()->load(['profile', 'vehicles'])
-        );
+        $usuario = $user->fresh()->load(['profile', 'vehicles']);
+
+        return response()->json($usuario);
     }
 
+    //baja logica de la cuenta
     public function deactivate(User $user)
     {
         $this->authorizeUserAccess($user);
@@ -44,6 +47,7 @@ class UserController extends Controller
         ]);
     }
 
+    //contadores rapidos del panel
     public function stats(User $user)
     {
         $this->authorizeUserAccess($user);
@@ -56,19 +60,15 @@ class UserController extends Controller
         ]);
     }
 
+    //solo deja pasar al ADMIN o al dueño de la cuenta
     private function authorizeUserAccess(User $user): void
     {
         $authenticatedUser = auth()->user();
 
         if (!$authenticatedUser) {
             abort(401, 'Usuario no autenticado.');
-        }
-
-        if ($authenticatedUser->rol === 'ADMIN') {
-            return;
-        }
-
-        if ((int) $authenticatedUser->id !== (int) $user->id) {
+        } else if ($authenticatedUser->rol !== 'ADMIN'
+            && (int) $authenticatedUser->id !== (int) $user->id) {
             abort(403, 'No tienes permiso para acceder a este usuario.');
         }
     }

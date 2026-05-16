@@ -10,13 +10,15 @@ use Illuminate\Support\Facades\DB;
 
 class VehicleController extends Controller
 {
+    //distintivos ambientales disponibles
     public function labels()
     {
-        return response()->json(
-            VehicleLabel::all()
-        );
+        $rows = VehicleLabel::all();
+
+        return response()->json($rows);
     }
 
+    //vehiculos del usuario, el por defecto el primero
     public function index(int $userId)
     {
         User::findOrFail($userId);
@@ -30,6 +32,7 @@ class VehicleController extends Controller
         return response()->json($vehicles);
     }
 
+    //da de alta un vehiculo
     public function store(Request $request, int $userId)
     {
         User::findOrFail($userId);
@@ -73,12 +76,12 @@ class VehicleController extends Controller
             $this->clearOtherDefaults($userId, $vehicle->id);
         }
 
-        return response()->json(
-            Vehicle::with('label')->findOrFail($vehicle->id),
-            201
-        );
+        $creado = Vehicle::with('label')->findOrFail($vehicle->id);
+
+        return response()->json($creado, 201);
     }
 
+    //detalle de un vehiculo
     public function show(int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
@@ -91,6 +94,7 @@ class VehicleController extends Controller
         return response()->json($vehicle);
     }
 
+    //edita un vehiculo del usuario
     public function update(Request $request, int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
@@ -135,11 +139,12 @@ class VehicleController extends Controller
             $this->clearOtherDefaults($userId, $vehicle->id);
         }
 
-        return response()->json(
-            Vehicle::with('label')->findOrFail($vehicle->id)
-        );
+        $actualizado = Vehicle::with('label')->findOrFail($vehicle->id);
+
+        return response()->json($actualizado);
     }
 
+    //borra el vehiculo (soft delete)
     public function delete(int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
@@ -156,6 +161,7 @@ class VehicleController extends Controller
         ]);
     }
 
+    //pone este vehiculo como predeterminado en transaccion
     public function setDefault(int $userId, int $vehicleId)
     {
         User::findOrFail($userId);
@@ -180,6 +186,7 @@ class VehicleController extends Controller
         ]);
     }
 
+    //deja al actual como unico por defecto
     private function clearOtherDefaults(int $userId, int $currentVehicleId): void
     {
         Vehicle::where('user_id', $userId)
@@ -187,16 +194,22 @@ class VehicleController extends Controller
             ->update(['is_default' => false]);
     }
 
+    //considera electrico tanto al puro como al hibrido
     private function isElectricFuel(string $fuelType): bool
     {
-        return in_array($fuelType, ['electric', 'hybrid'], true);
+        $esElectrico = in_array($fuelType, ['electric', 'hybrid'], true);
+
+        return $esElectrico;
     }
 
+    //arma un alias del tipo "marca modelo"
     private function buildNickname(array $data): string
     {
         $brand = $data['brand'] ?? '';
         $model = $data['model'] ?? '';
 
-        return trim($brand . ' ' . $model) ?: 'Vehículo';
+        $nombre = trim($brand . ' ' . $model) ?: 'Vehículo';
+
+        return $nombre;
     }
 }

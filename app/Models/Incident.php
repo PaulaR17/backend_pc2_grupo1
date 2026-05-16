@@ -12,9 +12,7 @@ class Incident extends Model
 
     protected $table = 'incidents';
 
-    // La tabla `incidents` solo tiene `created_at` (con valor por defecto NOW).
-    // No hay columna `updated_at`, así que desactivamos los timestamps
-    // automáticos de Eloquent para que no intente escribirla.
+    //la tabla no tiene updated_at, asi que apagamos timestamps
     public $timestamps = false;
 
     protected $fillable = [

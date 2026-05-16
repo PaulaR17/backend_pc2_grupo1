@@ -4,14 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 
-// Lanza el script Python de PC1 que genera predicciones e inserta
-// directamente en la tabla `predictions` de PostgreSQL.
-//
-// El script puede vivir:
-//   - LOCALMENTE: si la app y el código de PC1 están en la misma máquina.
-//     Se controla con la variable de entorno ML_PYTHON_BIN + ML_PROJECT_PATH.
-//   - REMOTO (LORCA): si PC1 corre en otra máquina, se ejecuta vía SSH.
-//     Se controla con ML_USE_SSH=true + ML_SSH_USER + ML_SSH_HOST.
+//lanza el script de PC1 en local o por SSH segun config
 class RunPredictions extends Command
 {
     protected $signature = 'predictions:run
@@ -21,6 +14,7 @@ class RunPredictions extends Command
 
     protected $description = 'Ejecuta el modelo de PC1 y vuelca las predicciones a la BD';
 
+    //entrada del comando artisan
     public function handle(): int
     {
         $target = (string) $this->option('target');
@@ -31,7 +25,6 @@ class RunPredictions extends Command
         $proyectoLocal = env('ML_PROJECT_PATH', base_path('../Proyecto-de-Computacion-I'));
         $pythonLocal   = env('ML_PYTHON_BIN', 'python3');
 
-        // Argumentos del script Python.
         $argsScript = sprintf(
             '--dias %d --modelo %s --target %s',
             $dias,
@@ -68,18 +61,20 @@ class RunPredictions extends Command
         return $resultado;
     }
 
-    // Construye el comando para ejecutar localmente.
+    //comando para correr el script en local
     private function construirComandoLocal(string $proyecto, string $python, string $args): string
     {
-        return sprintf(
+        $comando = sprintf(
             'cd %s && %s generar_predicciones.py %s',
             escapeshellarg($proyecto),
             escapeshellarg($python),
             $args,
         );
+
+        return $comando;
     }
 
-    // Construye el comando para ejecutar a través de SSH (LORCA).
+    //comando para correr el script por SSH en LORCA
     private function construirComandoSsh(string $args): string
     {
         $usuario = env('ML_SSH_USER');
@@ -94,10 +89,12 @@ class RunPredictions extends Command
             $args,
         );
 
-        return sprintf(
+        $comandoSsh = sprintf(
             'ssh %s %s',
             escapeshellarg($usuario . '@' . $host),
             escapeshellarg($comandoRemoto),
         );
+
+        return $comandoSsh;
     }
 }

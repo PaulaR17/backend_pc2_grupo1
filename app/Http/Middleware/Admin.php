@@ -9,18 +9,14 @@ use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 
 class Admin
 {
-    /**
-     * Handle an incoming request.
-     *
-     * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     */
+    //corta el paso a quien no sea ADMIN
     public function handle(Request $request, Closure $next): Response
     {
         $user = auth()->user();
+
         if (!$user) {
             throw new UnauthorizedHttpException('', 'User not authenticated');
-        }
-        if ($user->rol !== 'ADMIN') {
+        } else if ($user->rol !== 'ADMIN') {
             throw new UnauthorizedHttpException('', 'User is not admin');
         }
 

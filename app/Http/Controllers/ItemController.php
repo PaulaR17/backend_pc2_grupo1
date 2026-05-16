@@ -11,27 +11,35 @@ use Illuminate\Http\Request;
 
 class ItemController extends Controller
 {
+    //devuelve todos los items de la tienda
     public function catalog()
     {
-        return response()->json(Item::all());
+        $items = Item::all();
+
+        return response()->json($items);
     }
 
+    //items que tiene el usuario en su inventario
     public function inventory(int $userId)
     {
         User::findOrFail($userId);
 
         $rows = Inventory::where('user_id', $userId)->get();
+
         return response()->json($rows);
     }
 
+    //insignias del usuario
     public function badges(int $userId)
     {
         User::findOrFail($userId);
 
         $rows = Badge::where('user_id', $userId)->get();
+
         return response()->json($rows);
     }
 
+    //equipa o desequipa un item en un slot
     public function updateEquipment(Request $request, int $userId)
     {
         User::findOrFail($userId);
@@ -41,7 +49,6 @@ class ItemController extends Controller
             'item_id' => 'nullable|integer|exists:items,id,deleted_at,NULL',
         ]);
 
-        //1 registro por slot solo, si ya hay uno con ese slot se actualiza, sino se crea nuevo
         $row = Equipment::updateOrCreate(
             ['user_id' => $userId, 'slot' => $data['slot']],
             ['item_id' => $data['item_id'], 'updated_at' => now()]

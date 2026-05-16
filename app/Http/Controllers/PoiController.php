@@ -6,21 +6,26 @@ use Illuminate\Http\Request;
 
 class PoiController extends Controller
 {
+    //saca la API key de ORS o revienta con 500
     private function orsApiKeyOrFail()
     {
         $apiKey = env('ORS_API_KEY');
+
         if (!$apiKey) {
             abort(response()->json([
                 'error' => 'server_misconfigured',
                 'message' => 'ORS_API_KEY is missing in .env',
             ], 500));
         }
+
         return $apiKey;
     }
 
+    //llama a la API de POIs de ORS y devuelve [status, body]
     private function postPois(array $payload)
     {
         $apiKey = $this->orsApiKeyOrFail();
+        $resultado = null;
 
         $url = "https://api.openrouteservice.org/pois";
 
@@ -42,29 +47,28 @@ class PoiController extends Controller
         curl_close($ch);
 
         if ($raw === false) {
-            return [502, [
+            $resultado = [502, [
                 'error' => 'ors_unreachable',
                 'message' => $curlErr ?: 'Unknown cURL error',
             ]];
+        } else {
+            $json = json_decode($raw, true);
+
+            if ($httpCode < 200 || $httpCode >= 300) {
+                $resultado = [502, [
+                    'error' => 'ors_error',
+                    'status' => $httpCode,
+                    'details' => $json ?? $raw,
+                ]];
+            } else {
+                $resultado = [200, $json];
+            }
         }
 
-        $json = json_decode($raw, true);
-
-        if ($httpCode < 200 || $httpCode >= 300) {
-            return [502, [
-                'error' => 'ors_error',
-                'status' => $httpCode,
-                'details' => $json ?? $raw,
-            ]];
-        }
-
-        return [200, $json];
+        return $resultado;
     }
 
-    /**
-     * GET /api/pois/categories
-     * Devuelve lista de category_group_ids y category_ids.
-     */
+    //lista de categorias y grupos de POI segun ORS
     public function categories(Request $request)
     {
         [$status, $data] = $this->postPois([
@@ -74,12 +78,13 @@ class PoiController extends Controller
         return response()->json($data, $status);
     }
 
+    //busca POIs cerca de un punto
     public function search(Request $request)
     {
         $validated = $request->validate([
             'center.lon' => 'required|numeric|between:-180,180',
             'center.lat' => 'required|numeric|between:-90,90',
-            'radius_m' => 'sometimes|integer|min:1|max:2000', 
+            'radius_m' => 'sometimes|integer|min:1|max:2000',
             'limit' => 'sometimes|integer|min:1|max:200',
             'sortby' => 'sometimes|string|in:distance,category',
             'filters' => 'sometimes|array',
@@ -119,10 +124,7 @@ class PoiController extends Controller
         return response()->json($data, $status);
     }
 
-    /**
-     * POST /api/pois/stats
-     * Igual que search, pero devuelve estadísticas por categorías/grupos.
-     */
+    //estadisticas de POIs por categoria en un radio
     public function stats(Request $request)
     {
         $validated = $request->validate([
