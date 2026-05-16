@@ -4,13 +4,15 @@
 
 set -e
 
-#1. preparar venv de PC1 si esta montado
+#1. preparar venv de PC1 FUERA del volumen montado.
+#si lo hicieramos dentro (/opt/pc1/.venv) chocaria con el del host que
+#apunta a un Python pyenv que no existe en el container.
 if [ -d "/opt/pc1" ] && [ -f "/opt/pc1/requirements.txt" ]; then
-    if [ ! -d "/opt/pc1/.venv" ]; then
-        echo "[entrypoint] creando venv de PC1..."
-        python3 -m venv /opt/pc1/.venv
-        /opt/pc1/.venv/bin/pip install --upgrade pip
-        /opt/pc1/.venv/bin/pip install -r /opt/pc1/requirements.txt
+    if [ ! -x "/opt/pc1-venv/bin/python" ]; then
+        echo "[entrypoint] creando venv de PC1 en /opt/pc1-venv..."
+        python3 -m venv /opt/pc1-venv
+        /opt/pc1-venv/bin/pip install --upgrade pip
+        /opt/pc1-venv/bin/pip install -r /opt/pc1/requirements.txt
     fi
 fi
 

@@ -56,7 +56,10 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_URL: http://localhost:8000
-      APP_KEY: base64:25Fe9gwtSC8OEztUmb2bJcPcSM20SKOINJj9MM8uo9I=
+      #secretos: SIEMPRE desde el .env local (que NO se sube a git).
+      #si falta el .env, docker compose se queja al subir.
+      APP_KEY: ${APP_KEY}
+      JWT_SECRET: ${JWT_SECRET}
       #drivers de cache/sesion/cola a "file" para no necesitar tablas extras en la BD
       CACHE_DRIVER: file
       CACHE_STORE: file
@@ -65,9 +68,6 @@ services:
       BROADCAST_CONNECTION: log
       LOG_CHANNEL: stack
       LOG_LEVEL: debug
-      #JWT: secretos pasados por env para no depender del .env local.
-      #en LORCA, generar otro JWT_SECRET con `php artisan jwt:secret` y rotarlos.
-      JWT_SECRET: qsKpPiNS4s2mZhDQPY8X0aF0kvvdCEBqM2wFrSIZUlC2lwMJ6W8ZOW4nI9w7zhky
       JWT_ALGO: RS512
       JWT_PRIVATE_KEY: file:///var/www/html/storage/certs/jwt-rsa-4096-private.pem
       JWT_PUBLIC_KEY: file:///var/www/html/storage/certs/jwt-rsa-4096-public.pem
@@ -75,7 +75,7 @@ services:
       #PC1 corre en el propio container (Python instalado en el Dockerfile)
       ML_USE_SSH: "false"
       ML_PROJECT_PATH: /opt/pc1
-      ML_PYTHON_BIN: /opt/pc1/.venv/bin/python
+      ML_PYTHON_BIN: /opt/pc1-venv/bin/python
       #PC1 lee estas para conectar a postgres
       PC2_DB_HOST: postgres
       PC2_DB_PORT: 5432
