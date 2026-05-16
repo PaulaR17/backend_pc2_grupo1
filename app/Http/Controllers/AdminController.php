@@ -96,11 +96,30 @@ class AdminController extends Controller
         ]);
     }
 
-    public function runPredictions()
+    // Ejecuta el comando Artisan que lanza el script Python de PC1.
+    // El script genera predicciones para los próximos 7 días y las inserta
+    // en la tabla `predictions` (que el frontend consume desde el mapa).
+    public function runPredictions(\Illuminate\Http\Request $request)
     {
-        return response()->json([
-            'ok' => true,
-            'message' => 'Cálculo de predicciones ejecutado correctamente.',
+        $target = $request->input('target', 'Accidentes');
+        $modelo = $request->input('modelo', 'random_forest.pkl');
+        $dias   = (int) $request->input('dias', 7);
+
+        $exitCode = \Illuminate\Support\Facades\Artisan::call('predictions:run', [
+            '--target' => $target,
+            '--modelo' => $modelo,
+            '--dias'   => $dias,
         ]);
+
+        $salida = \Illuminate\Support\Facades\Artisan::output();
+        $ok = $exitCode === 0;
+
+        return response()->json([
+            'ok'      => $ok,
+            'message' => $ok
+                ? 'Predicciones ejecutadas correctamente.'
+                : 'Error ejecutando las predicciones (revisa los logs).',
+            'output'  => $salida,
+        ], $ok ? 200 : 500);
     }
 }

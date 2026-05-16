@@ -14,6 +14,7 @@ class Prediction extends Model
 
     protected $fillable = [
         'district',
+        'for_date',
         'probability',
         'level',
         'predicted_at',
@@ -23,6 +24,7 @@ class Prediction extends Model
 
     protected $casts = [
         'district' => 'integer',
+        'for_date' => 'date',
         'probability' => 'decimal:4',
         'predicted_at' => 'datetime',
     ];

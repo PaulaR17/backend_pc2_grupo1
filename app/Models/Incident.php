@@ -11,7 +11,12 @@ class Incident extends Model
     use HasFactory, SoftDeletes;
 
     protected $table = 'incidents';
-    public $timestamps = true; 
+
+    // La tabla `incidents` solo tiene `created_at` (con valor por defecto NOW).
+    // No hay columna `updated_at`, así que desactivamos los timestamps
+    // automáticos de Eloquent para que no intente escribirla.
+    public $timestamps = false;
+
     protected $fillable = [
         'type',
         'title',

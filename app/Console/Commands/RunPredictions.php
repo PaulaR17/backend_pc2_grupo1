@@ -3,83 +3,101 @@
 namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
-use App\Models\Prediction;
 
+// Lanza el script Python de PC1 que genera predicciones e inserta
+// directamente en la tabla `predictions` de PostgreSQL.
+//
+// El script puede vivir:
+//   - LOCALMENTE: si la app y el código de PC1 están en la misma máquina.
+//     Se controla con la variable de entorno ML_PYTHON_BIN + ML_PROJECT_PATH.
+//   - REMOTO (LORCA): si PC1 corre en otra máquina, se ejecuta vía SSH.
+//     Se controla con ML_USE_SSH=true + ML_SSH_USER + ML_SSH_HOST.
 class RunPredictions extends Command
 {
-    protected $signature = 'predictions:run {modelType=random_forest} {targetType=accidentes}';
-    protected $description = 'Ejecuta el modelo en la VM y guarda los resultados en la BD';
+    protected $signature = 'predictions:run
+                            {--target=Accidentes : Accidentes, Calidad Aire o Emergencias}
+                            {--modelo=random_forest.pkl : Nombre del .pkl en modelos_guardados/}
+                            {--dias=7 : Cuántos días futuros predecir}';
 
-    public function handle()
+    protected $description = 'Ejecuta el modelo de PC1 y vuelca las predicciones a la BD';
+
+    public function handle(): int
     {
-        $sshUser = env('ML_SSH_USER');
-        $sshHost = env('ML_SSH_HOST');
-        $remoteProject = env('ML_REMOTE_PROJECT_PATH');
-        $remotePython = env('ML_REMOTE_PYTHON_BIN');
-        $remoteJson = env('ML_REMOTE_JSON_PATH');
-        $modelPath = env('ML_MODEL_PATH');
+        $target = (string) $this->option('target');
+        $modelo = (string) $this->option('modelo');
+        $dias   = (int)    $this->option('dias');
 
-        $modelType = $this->argument('modelType');
-        $targetType = $this->argument('targetType');
+        $usaSsh        = filter_var(env('ML_USE_SSH', false), FILTER_VALIDATE_BOOLEAN);
+        $proyectoLocal = env('ML_PROJECT_PATH', base_path('../Proyecto-de-Computacion-I'));
+        $pythonLocal   = env('ML_PYTHON_BIN', 'python3');
 
-        if (
-            !$sshUser || !$sshHost || !$remoteProject ||
-            !$remotePython || !$remoteJson || !$modelPath
-        ) {
-            $this->error('Faltan variables ML_* en el .env');
-            return 1;
+        // Argumentos del script Python.
+        $argsScript = sprintf(
+            '--dias %d --modelo %s --target %s',
+            $dias,
+            escapeshellarg($modelo),
+            escapeshellarg($target),
+        );
+
+        if ($usaSsh) {
+            $comando = $this->construirComandoSsh($argsScript);
+        } else {
+            $comando = $this->construirComandoLocal($proyectoLocal, $pythonLocal, $argsScript);
         }
 
-        $remoteCommand =
-            'cd ' . escapeshellarg($remoteProject) .
-            ' && ' . escapeshellarg($remotePython) .
-            ' run_predictions_backend.py' .
-            ' --model-path ' . escapeshellarg($modelPath) .
-            ' --model-type ' . escapeshellarg($modelType) .
-            ' --target-type ' . escapeshellarg($targetType);
+        $this->info('Lanzando script de predicciones...');
+        $this->line($comando);
 
-        $sshCommand =
-            'ssh ' . escapeshellarg($sshUser . '@' . $sshHost) . ' ' .
-            escapeshellarg($remoteCommand);
+        $salida = [];
+        $codigo = 0;
+        exec($comando . ' 2>&1', $salida, $codigo);
 
-        exec($sshCommand . ' 2>&1', $outPredict, $codePredict);
-
-        if ($codePredict !== 0) {
-            $this->error('Error ejecutando predicciones en la VM');
-            $this->line(implode("\n", $outPredict));
-            return 1;
+        foreach ($salida as $linea) {
+            $this->line($linea);
         }
 
-        $sshCatCommand =
-            'ssh ' . escapeshellarg($sshUser . '@' . $sshHost) . ' ' .
-            escapeshellarg('cat ' . escapeshellarg($remoteJson));
+        $resultado = 0;
 
-        $json = shell_exec($sshCatCommand);
-
-        if (!$json) {
-            $this->error('No se pudo leer predicciones_resumen.json desde la VM');
-            return 1;
+        if ($codigo !== 0) {
+            $this->error('El script Python terminó con código ' . $codigo);
+            $resultado = 1;
+        } else {
+            $this->info('Predicciones generadas correctamente.');
         }
 
-        $predictions = json_decode($json, true);
+        return $resultado;
+    }
 
-        if (!is_array($predictions)) {
-            $this->error('El JSON recibido no es válido');
-            return 1;
-        }
+    // Construye el comando para ejecutar localmente.
+    private function construirComandoLocal(string $proyecto, string $python, string $args): string
+    {
+        return sprintf(
+            'cd %s && %s generar_predicciones.py %s',
+            escapeshellarg($proyecto),
+            escapeshellarg($python),
+            $args,
+        );
+    }
 
-        foreach ($predictions as $prediction) {
-            Prediction::create([
-                'district' => $prediction['district'],
-                'probability' => $prediction['probability'],
-                'level' => $prediction['level'],
-                'predicted_at' => $prediction['predicted_at'],
-                'model_type' => $prediction['model_type'],
-                'target_type' => $prediction['target_type'],
-            ]);
-        }
+    // Construye el comando para ejecutar a través de SSH (LORCA).
+    private function construirComandoSsh(string $args): string
+    {
+        $usuario = env('ML_SSH_USER');
+        $host    = env('ML_SSH_HOST');
+        $ruta    = env('ML_PROJECT_PATH');
+        $python  = env('ML_PYTHON_BIN', 'python3');
 
-        $this->info('Predicciones guardadas correctamente');
-        return 0;
+        $comandoRemoto = sprintf(
+            'cd %s && %s generar_predicciones.py %s',
+            escapeshellarg($ruta),
+            escapeshellarg($python),
+            $args,
+        );
+
+        return sprintf(
+            'ssh %s %s',
+            escapeshellarg($usuario . '@' . $host),
+            escapeshellarg($comandoRemoto),
+        );
     }
 }
