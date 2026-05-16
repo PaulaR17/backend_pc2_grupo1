@@ -55,7 +55,23 @@ services:
       DB_PASSWORD: root
       APP_ENV: production
       APP_DEBUG: "false"
-      APP_URL: http://localhost
+      APP_URL: http://localhost:8000
+      APP_KEY: base64:25Fe9gwtSC8OEztUmb2bJcPcSM20SKOINJj9MM8uo9I=
+      #drivers de cache/sesion/cola a "file" para no necesitar tablas extras en la BD
+      CACHE_DRIVER: file
+      CACHE_STORE: file
+      SESSION_DRIVER: file
+      QUEUE_CONNECTION: sync
+      BROADCAST_CONNECTION: log
+      LOG_CHANNEL: stack
+      LOG_LEVEL: debug
+      #JWT: secretos pasados por env para no depender del .env local.
+      #en LORCA, generar otro JWT_SECRET con `php artisan jwt:secret` y rotarlos.
+      JWT_SECRET: qsKpPiNS4s2mZhDQPY8X0aF0kvvdCEBqM2wFrSIZUlC2lwMJ6W8ZOW4nI9w7zhky
+      JWT_ALGO: RS512
+      JWT_PRIVATE_KEY: file:///var/www/html/storage/certs/jwt-rsa-4096-private.pem
+      JWT_PUBLIC_KEY: file:///var/www/html/storage/certs/jwt-rsa-4096-public.pem
+      JWT_PASSPHRASE: ""
       #PC1 corre en el propio container (Python instalado en el Dockerfile)
       ML_USE_SSH: "false"
       ML_PROJECT_PATH: /opt/pc1
@@ -74,7 +90,9 @@ services:
       - "8000:8000"
     restart: unless-stopped
 
-  #frontend Angular servido por nginx en :80
+  #frontend Angular servido por nginx. Mapeamos a 8080 en el host porque
+  #en muchas maquinas el puerto 80 esta ocupado (Apache, otro nginx...).
+  #en LORCA puedes cambiarlo a "80:80" si la MV tiene el 80 libre.
   frontend:
     build:
       context: ../frontend/frontend_pc2_grupo1
@@ -83,7 +101,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "8080:80"
     restart: unless-stopped
 
 volumes:

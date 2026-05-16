@@ -27,11 +27,10 @@ while ! php -r "new PDO('pgsql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATAB
 done
 echo "[entrypoint] postgres OK"
 
-#3. migraciones y seeder en la primera ejecucion
+#3. migraciones y seeder en la primera ejecucion.
+#APP_KEY y JWT_SECRET los pasamos por docker-compose, no llamamos a key:generate
+#(haria falta un .env editable; aqui Laravel los lee directamente del entorno).
 if [ ! -f "/var/www/html/.installed" ]; then
-    echo "[entrypoint] generando APP_KEY si falta..."
-    php artisan key:generate --force || true
-
     echo "[entrypoint] aplicando migraciones..."
     php artisan migrate --force
 

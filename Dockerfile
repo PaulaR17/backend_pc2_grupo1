@@ -1,7 +1,7 @@
-#imagen oficial de PHP 8.2 con la CLI; encima instalamos Python para que
-#el comando `php artisan predictions:run` pueda ejecutar el script de PC1
-#directamente (sin SSH ni docker exec entre containers).
-FROM php:8.2-cli
+#PHP 8.4 (lo exige Symfony 8 en composer.lock) + Python 3 dentro del mismo
+#container para que `php artisan predictions:run` pueda ejecutar el script
+#de PC1 directamente con exec(), sin SSH ni docker exec entre containers.
+FROM php:8.4-cli
 
 #paquetes del sistema:
 #  - git, unzip, zip, curl: composer + utilidades
