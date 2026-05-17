@@ -14,6 +14,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\RouteController;
 use App\Http\Controllers\PoiController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\WalletController;
 
 Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
@@ -56,6 +57,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::delete('/users/{user}', [UserController::class, 'deactivate']);
     Route::get('/users/{user}/stats', [UserController::class, 'stats']);
 
+    Route::post('/incidents/report', [IncidentController::class, 'report']);
     Route::get('/users/{user}/profile', [UserProfileController::class, 'show']);
     Route::put('/users/{user}/locations/home', [UserProfileController::class, 'setHome']);
     Route::put('/users/{user}/locations/work', [UserProfileController::class, 'setWork']);
@@ -87,6 +89,8 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/users/{user}/badges', [ItemController::class, 'badges']);
     Route::get('/users/{user}/equipment', [ItemController::class, 'equipment']);
     Route::put('/users/{user}/equipment', [ItemController::class, 'updateEquipment']);
+    Route::get('/users/{user}/wallet', [WalletController::class, 'balance']);
+    Route::post('/users/{user}/purchases', [WalletController::class, 'purchase']);
 });
 
 // Administrador

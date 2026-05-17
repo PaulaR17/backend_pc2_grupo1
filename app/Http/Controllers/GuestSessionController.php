@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HasRiskZones;
 use App\Models\GuestSession;
 use Illuminate\Http\Request;
 
 class GuestSessionController extends Controller
 {
+    use HasRiskZones;
+
     private const MAX_SEARCHES = 4;
 
     //abre una sesion de invitado nueva
@@ -167,6 +170,11 @@ class GuestSessionController extends Controller
                             if ($wantGeometry) {
                                 $out['geometry'] = $route0['geometry'] ?? null;
                             }
+
+                            //zonas peligrosas atravesadas: cruzamos la ruta con las
+                            //predicciones de PC1 para que el invitado tambien las vea
+                            $distritos = $this->distritosEnRuta($validated['origin'], $validated['destination']);
+                            $out['risk_zones'] = $this->riesgoDistritos($distritos);
 
                             $respuesta = response()->json($out);
                         }

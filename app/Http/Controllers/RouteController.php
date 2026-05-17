@@ -2,14 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\HasRiskZones;
 use App\Models\Favorite;
 use App\Models\History;
 use App\Models\User;
+use App\Services\RewardService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class RouteController extends Controller
 {
+    use HasRiskZones;
+
     //autocompletado mezclando distritos locales y geocode de ORS
     public function searchLocation(Request $request)
     {
@@ -380,7 +384,9 @@ class RouteController extends Controller
                     'details' => $ors,
                 ], 404);
             } else {
-                $respuesta = response()->json($this->buildRouteResponse($route0, $include));
+                $respuesta = response()->json(
+                    $this->buildRouteResponse($route0, $include, $data['origin'], $data['destination'])
+                );
             }
         }
 
@@ -394,8 +400,10 @@ class RouteController extends Controller
             'user_id' => 'required|integer|exists:users,id,deleted_at,NULL',
             'origin.lon' => 'required|numeric|between:-180,180',
             'origin.lat' => 'required|numeric|between:-90,90',
+            'origin.label' => 'sometimes|string|max:255',
             'destination.lon' => 'required|numeric|between:-180,180',
             'destination.lat' => 'required|numeric|between:-90,90',
+            'destination.label' => 'sometimes|string|max:255',
             'profile' => 'sometimes|string|in:driving-car,driving-hgv,cycling-regular,foot-walking',
         ]);
 
@@ -427,14 +435,20 @@ class RouteController extends Controller
                     'user_id' => $data['user_id'],
                     'origin_lat' => $data['origin']['lat'],
                     'origin_lon' => $data['origin']['lon'],
+                    'origin_label' => $data['origin']['label'] ?? null,
                     'dest_lat' => $data['destination']['lat'],
                     'dest_lon' => $data['destination']['lon'],
+                    'dest_label' => $data['destination']['label'] ?? null,
                     'distance_km' => round(($route0['summary']['distance'] ?? 0) / 1000, 2),
                     'duration_min' => round(($route0['summary']['duration'] ?? 0) / 60, 2),
                 ]);
 
-                $out = $this->buildRouteResponse($route0, $include);
+                $out = $this->buildRouteResponse($route0, $include, $data['origin'], $data['destination']);
                 $out['history_id'] = $history->id;
+
+                //recompensa al usuario por calcular una ruta (chapitas + XP)
+                $rewards = app(RewardService::class);
+                $out['reward'] = $rewards->reward($data['user_id'], 'ROUTE_CALCULATED');
 
                 $respuesta = response()->json($out, 201);
             }
@@ -450,17 +464,17 @@ class RouteController extends Controller
     }
 
     //historial de rutas, las nuevas arriba
-    public function history(User $userId)
+    public function history(User $user)
     {
-        $rows = $userId->history()->orderByDesc('created_at')->get();
+        $rows = $user->history()->orderByDesc('created_at')->get();
 
         return response()->json($rows);
     }
 
     //borra una entrada del historial del usuario
-    public function deleteHistory(User $userId, History $historyId)
+    public function deleteHistory(User $user, History $historyId)
     {
-        if ($historyId->user_id !== $userId->id) {
+        if ($historyId->user_id !== $user->id) {
             abort(403);
         }
 
@@ -470,22 +484,22 @@ class RouteController extends Controller
     }
 
     //favoritos del usuario con su entrada de historial
-    public function favorites(User $userId)
+    public function favorites(User $user)
     {
-        $rows = $userId->favorites()->with('history')->get();
+        $rows = $user->favorites()->with('history')->get();
 
         return response()->json($rows);
     }
 
     //añade una ruta a favoritos sin duplicar
-    public function addFavorite(Request $request, User $userId)
+    public function addFavorite(Request $request, User $user)
     {
         $data = $request->validate([
-            'history_id' => 'required|integer|exists:history,id,user_id,' . $userId->id,
+            'history_id' => 'required|integer|exists:history,id,user_id,' . $user->id,
         ]);
 
         $favorite = Favorite::firstOrCreate([
-            'user_id' => $userId->id,
+            'user_id' => $user->id,
             'history_id' => $data['history_id'],
         ]);
 
@@ -493,9 +507,9 @@ class RouteController extends Controller
     }
 
     //quita un favorito del usuario
-    public function removeFavorite(User $userId, Favorite $favoriteId)
+    public function removeFavorite(User $user, Favorite $favoriteId)
     {
-        if ($favoriteId->user_id !== $userId->id) {
+        if ($favoriteId->user_id !== $user->id) {
             abort(403);
         }
 
@@ -543,8 +557,10 @@ class RouteController extends Controller
         return $resultado;
     }
 
-    //monta la respuesta segun los bloques que pida el cliente
-    private function buildRouteResponse($route, $include)
+    //monta la respuesta segun los bloques que pida el cliente. si recibe
+    //origen y destino, cruza la ruta con las predicciones de PC1 y devuelve
+    //los distritos peligrosos atravesados en "risk_zones".
+    private function buildRouteResponse($route, $include, $origin = null, $destination = null)
     {
         $out = [];
 
@@ -563,6 +579,13 @@ class RouteController extends Controller
             $out['geometry'] = $route['geometry'] ?? null;
         }
 
+        //zonas peligrosas atravesadas (siempre que tengamos origen y destino)
+        if ($origin !== null && $destination !== null) {
+            $distritos = $this->distritosEnRuta($origin, $destination);
+            $out['risk_zones'] = $this->riesgoDistritos($distritos);
+        }
+
         return $out;
     }
+
 }
