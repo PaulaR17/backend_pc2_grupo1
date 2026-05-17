@@ -72,6 +72,8 @@ services:
       JWT_PRIVATE_KEY: file:///var/www/html/storage/certs/jwt-rsa-4096-private.pem
       JWT_PUBLIC_KEY: file:///var/www/html/storage/certs/jwt-rsa-4096-public.pem
       JWT_PASSPHRASE: ""
+      #Open Route Service: clave del API de geocoding y rutas
+      ORS_API_KEY: ${ORS_API_KEY}
       #PC1 corre en el propio container (Python instalado en el Dockerfile)
       ML_USE_SSH: "false"
       ML_PROJECT_PATH: /opt/pc1
@@ -84,8 +86,11 @@ services:
       PC2_DB_PASSWORD: root
       AEMET_API_KEY: ${AEMET_API_KEY:-}
     volumes:
-      #PC1 montado en /opt/pc1: asi el venv se crea en el host y persiste
+      #PC1 montado en /opt/pc1 (codigo accesible al backend para ejecutarlo)
       - ../Proyecto-de-Computacion-I:/opt/pc1
+      #venv en volumen named para que sobreviva a `docker compose up --force-recreate`
+      #y evitar reinstalar pandas/sklearn cada vez que tocamos algo
+      - pc1_venv:/opt/pc1-venv
     ports:
       - "8000:8000"
     restart: unless-stopped
@@ -106,3 +111,4 @@ services:
 
 volumes:
   pgdata:
+  pc1_venv:

@@ -68,13 +68,15 @@ class DatabaseSeeder extends Seeder
     // -------------------------------------------------------
     private function crearItems(): void
     {
+        //el campo "image" guarda un emoji o ruta. usamos emoji para no
+        //depender de imagenes externas y para que se vea bien en cualquier UI.
         $items = [
             [
                 'name'        => 'Gorra clásica',
                 'type'        => 'HAT',
                 'rarity'      => 'common',
                 'description' => 'Una gorra sencilla para tu mascota.',
-                'image'       => null,
+                'image'       => '🧢',
                 'price'       => 50,
                 'active'      => true,
             ],
@@ -83,7 +85,7 @@ class DatabaseSeeder extends Seeder
                 'type'        => 'HAT',
                 'rarity'      => 'epic',
                 'description' => 'Para una mascota con estilo.',
-                'image'       => null,
+                'image'       => '🎩',
                 'price'       => 250,
                 'active'      => true,
             ],
@@ -92,7 +94,7 @@ class DatabaseSeeder extends Seeder
                 'type'        => 'GLASSES',
                 'rarity'      => 'rare',
                 'description' => 'Protección extra contra el sol madrileño.',
-                'image'       => null,
+                'image'       => '🕶️',
                 'price'       => 120,
                 'active'      => true,
             ],
@@ -101,7 +103,7 @@ class DatabaseSeeder extends Seeder
                 'type'        => 'GLASSES',
                 'rarity'      => 'common',
                 'description' => 'Modelo intelectual.',
-                'image'       => null,
+                'image'       => '👓',
                 'price'       => 60,
                 'active'      => true,
             ],
@@ -110,7 +112,7 @@ class DatabaseSeeder extends Seeder
                 'type'        => 'SUIT',
                 'rarity'      => 'rare',
                 'description' => 'Perfecto para rutas largas.',
-                'image'       => null,
+                'image'       => '👕',
                 'price'       => 200,
                 'active'      => true,
             ],
@@ -119,7 +121,7 @@ class DatabaseSeeder extends Seeder
                 'type'        => 'SUIT',
                 'rarity'      => 'legendary',
                 'description' => 'Solo los mejores conductores lo lucen.',
-                'image'       => null,
+                'image'       => '🦺',
                 'price'       => 500,
                 'active'      => true,
             ],
