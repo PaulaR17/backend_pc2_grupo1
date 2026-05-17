@@ -85,6 +85,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::get('/items', [ItemController::class, 'catalog']);
     Route::get('/users/{user}/inventory', [ItemController::class, 'inventory']);
     Route::get('/users/{user}/badges', [ItemController::class, 'badges']);
+    Route::get('/users/{user}/equipment', [ItemController::class, 'equipment']);
     Route::put('/users/{user}/equipment', [ItemController::class, 'updateEquipment']);
 });
 

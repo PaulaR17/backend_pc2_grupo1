@@ -39,6 +39,18 @@ class ItemController extends Controller
         return response()->json($rows);
     }
 
+    //devuelve los slots equipados del usuario (solo los que tienen item)
+    public function equipment(int $userId)
+    {
+        User::findOrFail($userId);
+
+        $rows = Equipment::where('user_id', $userId)
+            ->whereNotNull('item_id')
+            ->get();
+
+        return response()->json($rows);
+    }
+
     //equipa o desequipa un item en un slot
     public function updateEquipment(Request $request, int $userId)
     {
