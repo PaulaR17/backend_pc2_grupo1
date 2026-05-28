@@ -507,10 +507,19 @@ class RouteController extends Controller
             'history_id' => 'required|integer|exists:history,id,user_id,' . $user->id,
         ]);
 
-        $favorite = Favorite::firstOrCreate([
+        //buscamos incluyendo soft-deleted: el unique constraint cuenta tambien
+        //las filas marcadas como borradas, asi que si el usuario quito el
+        //favorito antes hay que restaurarlo en vez de intentar insertar
+        $favorite = Favorite::withTrashed()->firstOrNew([
             'user_id' => $user->id,
             'history_id' => $data['history_id'],
         ]);
+
+        if ($favorite->trashed()) {
+            $favorite->restore();
+        } elseif (!$favorite->exists) {
+            $favorite->save();
+        }
 
         //cargamos la relacion history para que el front pinte la fila
         //sin tener que recargar la lista entera
