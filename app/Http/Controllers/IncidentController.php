@@ -35,8 +35,8 @@ class IncidentController extends Controller
             'type' => 'required|in:ACCIDENT,ROADWORK,EVENT',
             'lat' => 'required|numeric|between:-90,90',
             'lon' => 'required|numeric|between:-180,180',
-            'title' => 'sometimes|string|max:120',
-            'description' => 'sometimes|string|max:1000',
+            'title' => 'nullable|string|max:120',
+            'description' => 'nullable|string|max:1000',
         ]);
 
         $data['active'] = true;

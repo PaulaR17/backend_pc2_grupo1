@@ -15,11 +15,6 @@ class Favorite extends Model
     protected $fillable = [
         'user_id',
         'history_id',
-        'created_at',
-    ];
-
-    protected $casts = [
-        'created_at' => 'datetime',
     ];
 
     public function user()

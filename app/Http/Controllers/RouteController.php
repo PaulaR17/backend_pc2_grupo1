@@ -14,11 +14,13 @@ class RouteController extends Controller
 {
     use HasRiskZones;
 
-    //autocompletado mezclando distritos locales y geocode de ORS
+    //autocompletado mezclando distritos locales y geocode de ORS.
+    //pedimos a ORS varios resultados extra para que las calles concretas
+    //tengan sitio aunque tambien aparezca algun distrito local que coincida
     public function searchLocation(Request $request)
     {
         $q = trim((string) $request->query('q'));
-        $limit = max(1, min((int) $request->query('limit', 6), 10));
+        $limit = max(1, min((int) $request->query('limit', 8), 15));
         $respuesta = null;
 
         if (!$q || mb_strlen($q) < 2) {
@@ -28,6 +30,8 @@ class RouteController extends Controller
             ]);
         } else {
             $localResults = $this->localMadridSuggestions($q);
+            //pedimos a ORS el limite completo: queremos que entren calles aunque
+            //haya coincidencias locales de distrito
             $orsResults = $this->orsLocationSuggestions($q, $limit);
 
             $merged = collect($localResults)
@@ -92,10 +96,11 @@ class RouteController extends Controller
                         'lat' => $coordinates[1],
                     ];
                 })->filter(function ($result) {
-                    //solo dejamos ubicaciones en Madrid con coordenadas validas
-                    $valido = $result['lat'] !== null
-                        && $result['lon'] !== null
-                        && str_contains(mb_strtolower($result['text']), 'madrid');
+                    //ya filtramos por bounding box + country=ES en la peticion;
+                    //aqui solo descartamos resultados sin coordenadas validas.
+                    //antes exigiamos que el texto contuviera "madrid", pero eso
+                    //tiraba calles concretas cuyo label no incluia la palabra.
+                    $valido = $result['lat'] !== null && $result['lon'] !== null;
 
                     return $valido;
                 })->values();
@@ -358,6 +363,9 @@ class RouteController extends Controller
             'destination.lon' => 'required|numeric|between:-180,180',
             'destination.lat' => 'required|numeric|between:-90,90',
             'profile' => 'sometimes|string|in:driving-car,driving-hgv,cycling-regular,foot-walking',
+            //lista opcional de IDs de distrito a evitar (1..21)
+            'avoid_districts' => 'sometimes|array',
+            'avoid_districts.*' => 'integer|between:1,21',
         ]);
 
         $include = explode(',', (string) $request->query('include', 'summary'));
@@ -368,7 +376,8 @@ class RouteController extends Controller
             $data['destination'],
             in_array('steps', $include),
             in_array('geometry', $include),
-            in_array('extras', $include)
+            in_array('extras', $include),
+            $data['avoid_districts'] ?? []
         );
 
         $respuesta = null;
@@ -503,6 +512,10 @@ class RouteController extends Controller
             'history_id' => $data['history_id'],
         ]);
 
+        //cargamos la relacion history para que el front pinte la fila
+        //sin tener que recargar la lista entera
+        $favorite->load('history');
+
         return response()->json($favorite, 201);
     }
 
@@ -518,8 +531,11 @@ class RouteController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    //llamada al directions de ORS
-    private function callOrsDirections($profile, $origin, $destination, $steps, $geom, $extras)
+    //llamada al directions de ORS. Si nos pasan distritos a evitar, los
+    //convertimos a poligonos cuadrados (centrados en el centroide del
+    //distrito) y se los pasamos a ORS como "avoid_polygons" para que
+    //busque una ruta que los rodee.
+    private function callOrsDirections($profile, $origin, $destination, $steps, $geom, $extras, $avoidDistricts = [])
     {
         $apiKey = env('ORS_API_KEY');
         $resultado = null;
@@ -530,10 +546,7 @@ class RouteController extends Controller
                 'message' => 'ORS_API_KEY is missing in .env',
             ];
         } else {
-            $response = Http::withHeaders([
-                'Authorization' => $apiKey,
-                'Content-Type' => 'application/json',
-            ])->post("https://api.openrouteservice.org/v2/directions/{$profile}/json", [
+            $body = [
                 'coordinates' => [
                     [(float) $origin['lon'], (float) $origin['lat']],
                     [(float) $destination['lon'], (float) $destination['lat']],
@@ -541,7 +554,32 @@ class RouteController extends Controller
                 'instructions' => $steps,
                 'language' => 'es',
                 'geometry' => $geom,
-            ]);
+            ];
+
+            //si hay distritos que evitar, montamos un MultiPolygon GeoJSON
+            //con un cuadrado por cada distrito y lo añadimos a "options"
+            if (!empty($avoidDistricts)) {
+                $poligonos = [];
+                foreach ($avoidDistricts as $id) {
+                    $cuadrado = $this->poligonoEvitarDistrito((int) $id);
+                    if ($cuadrado !== null) {
+                        $poligonos[] = [$cuadrado];
+                    }
+                }
+                if (!empty($poligonos)) {
+                    $body['options'] = [
+                        'avoid_polygons' => [
+                            'type' => 'MultiPolygon',
+                            'coordinates' => $poligonos,
+                        ],
+                    ];
+                }
+            }
+
+            $response = Http::withHeaders([
+                'Authorization' => $apiKey,
+                'Content-Type' => 'application/json',
+            ])->post("https://api.openrouteservice.org/v2/directions/{$profile}/json", $body);
 
             if ($response->failed()) {
                 $resultado = [

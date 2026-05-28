@@ -39,6 +39,59 @@ trait HasRiskZones
         ];
     }
 
+    //nombre humano del distrito (mismo orden que el array de centroides)
+    private function nombresDistritos()
+    {
+        return [
+            1  => 'Centro',
+            2  => 'Arganzuela',
+            3  => 'Retiro',
+            4  => 'Salamanca',
+            5  => 'Chamartin',
+            6  => 'Tetuan',
+            7  => 'Chamberi',
+            8  => 'Fuencarral-El Pardo',
+            9  => 'Moncloa-Aravaca',
+            10 => 'Latina',
+            11 => 'Carabanchel',
+            12 => 'Usera',
+            13 => 'Puente de Vallecas',
+            14 => 'Moratalaz',
+            15 => 'Ciudad Lineal',
+            16 => 'Hortaleza',
+            17 => 'Villaverde',
+            18 => 'Villa de Vallecas',
+            19 => 'Vicalvaro',
+            20 => 'San Blas-Canillejas',
+            21 => 'Barajas',
+        ];
+    }
+
+    //cuadrado aproximado de ~1.5km alrededor del centroide del distrito,
+    //devuelto como lista de coordenadas [lon, lat] para usar en ORS como
+    //"polygon to avoid" al recalcular ruta sin pasar por la zona peligrosa
+    public function poligonoEvitarDistrito($id)
+    {
+        $centroides = $this->centroidesDistritos();
+        $resultado = null;
+
+        if (isset($centroides[$id])) {
+            $c = $centroides[$id];
+            //~0.013 grados de lat = ~1.5km, lon a esta latitud ~0.018 = ~1.5km
+            $dlat = 0.013;
+            $dlon = 0.018;
+            $resultado = [
+                [$c['lon'] - $dlon, $c['lat'] - $dlat],
+                [$c['lon'] + $dlon, $c['lat'] - $dlat],
+                [$c['lon'] + $dlon, $c['lat'] + $dlat],
+                [$c['lon'] - $dlon, $c['lat'] + $dlat],
+                [$c['lon'] - $dlon, $c['lat'] - $dlat],
+            ];
+        }
+
+        return $resultado;
+    }
+
     //devuelve el id del distrito cuyo centroide esta mas cerca del punto dado;
     //distancia euclidiana en grados, suficiente para una ciudad pequeña
     private function distritoMasCercano($lat, $lon)
@@ -92,6 +145,7 @@ trait HasRiskZones
     private function riesgoDistritos($distritos)
     {
         $resultado = [];
+        $nombres = $this->nombresDistritos();
 
         if (!empty($distritos)) {
             $hoy = date('Y-m-d');
@@ -106,6 +160,7 @@ trait HasRiskZones
                 if ($supera) {
                     $resultado[$p->district] = [
                         'district' => (int) $p->district,
+                        'name' => $nombres[$p->district] ?? ('Distrito ' . $p->district),
                         'level' => $p->level,
                         'probability' => (float) $p->probability,
                         'for_date' => $p->for_date,
