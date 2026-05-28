@@ -1,23 +1,11 @@
 #!/bin/sh
-#script de arranque del container backend. Instala las dependencias de Python
-#de PC1 dentro del propio container, ejecuta migraciones y arranca Laravel.
+# Arranque del container backend.
+# Espera a que postgres acepte conexiones, ejecuta migraciones + seeder
+# en la primera ejecucion y luego arranca el comando del CMD (php-fpm).
 
 set -e
 
-#1. preparar venv de PC1 FUERA del volumen montado.
-#si lo hicieramos dentro (/opt/pc1/.venv) chocaria con el del host que
-#apunta a un Python pyenv que no existe en el container.
-if [ -d "/opt/pc1" ] && [ -f "/opt/pc1/requirements.txt" ]; then
-    if [ ! -x "/opt/pc1-venv/bin/python" ]; then
-        echo "[entrypoint] creando venv de PC1 en /opt/pc1-venv..."
-        python3 -m venv /opt/pc1-venv
-        /opt/pc1-venv/bin/pip install --upgrade pip
-        /opt/pc1-venv/bin/pip install -r /opt/pc1/requirements.txt
-    fi
-fi
-
-#2. esperar a postgres (max 60s)
-echo "[entrypoint] esperando a postgres..."
+echo "[entrypoint] esperando a postgres en ${DB_HOST}:${DB_PORT}..."
 i=0
 while ! php -r "new PDO('pgsql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATABASE}', '${DB_USERNAME}', '${DB_PASSWORD}');" 2>/dev/null; do
     i=$((i+1))
@@ -29,18 +17,15 @@ while ! php -r "new PDO('pgsql:host=${DB_HOST};port=${DB_PORT};dbname=${DB_DATAB
 done
 echo "[entrypoint] postgres OK"
 
-#3. migraciones y seeder en la primera ejecucion.
-#APP_KEY y JWT_SECRET los pasamos por docker-compose, no llamamos a key:generate
-#(haria falta un .env editable; aqui Laravel los lee directamente del entorno).
-if [ ! -f "/var/www/html/.installed" ]; then
+# Migraciones + seeder solo la primera vez (la marca queda en el volumen)
+if [ ! -f "/var/www/html/storage/.installed" ]; then
     echo "[entrypoint] aplicando migraciones..."
     php artisan migrate --force
 
     echo "[entrypoint] poblando datos iniciales (seeder)..."
     php artisan db:seed --force || true
 
-    touch /var/www/html/.installed
+    touch /var/www/html/storage/.installed
 fi
 
-#4. arrancar el comando que toque (por defecto el php artisan serve del CMD)
 exec "$@"
