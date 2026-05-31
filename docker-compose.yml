@@ -1,19 +1,4 @@
-#docker-compose para PC2 + PC1 corriendo todo dentro de una sola maquina (LORCA).
-#
-#requisitos previos: los 3 repos clonados como hermanos:
-#   /home/grupo1/proyecto/Proyecto-de-Computacion-I/   <- PC1
-#   /home/grupo1/proyecto/backend/                     <- este repo
-#   /home/grupo1/proyecto/frontend/frontend_pc2_grupo1/ <- frontend Angular
-#
-#tambien necesitas un .env al lado de este docker-compose con:
-#   AEMET_API_KEY=...
-#
-#desde /home/grupo1/proyecto/backend/ ejecutar:
-#   docker compose up -d --build       (levanta todo)
-#   docker compose logs -f backend     (ver logs de la API)
-#   docker compose exec backend php artisan predictions:run   (forzar predicciones)
-#   docker compose exec backend /opt/pc1/.venv/bin/python /opt/pc1/run_all.py   (entrenar)
-#   docker compose down                (parar todo)
+#docker-compose de PC2 + PC1 en una sola maquina (LORCA); requiere los 3 repos hermanos y un .env (ver INSTALACION_LORCA.md)
 
 services:
 
@@ -35,9 +20,7 @@ services:
       interval: 5s
       retries: 10
 
-  #backend Laravel + PC1 (Python) en el mismo container. PC1 vive montado
-  #como volumen para que el comando `php artisan predictions:run` pueda
-  #ejecutarlo directamente con exec(), sin necesidad de hablar con otro container.
+  #backend Laravel + PC1 (Python) en el mismo container, asi `predictions:run` ejecuta PC1 con exec()
   backend:
     build:
       context: .
@@ -56,8 +39,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_URL: http://localhost:8000
-      #secretos: SIEMPRE desde el .env local (que NO se sube a git).
-      #si falta el .env, docker compose se queja al subir.
+      #secretos siempre desde el .env local (no se sube a git)
       APP_KEY: ${APP_KEY}
       JWT_SECRET: ${JWT_SECRET}
       #drivers de cache/sesion/cola a "file" para no necesitar tablas extras en la BD
@@ -88,16 +70,13 @@ services:
     volumes:
       #PC1 montado en /opt/pc1 (codigo accesible al backend para ejecutarlo)
       - ../Proyecto-de-Computacion-I:/opt/pc1
-      #venv en volumen named para que sobreviva a `docker compose up --force-recreate`
-      #y evitar reinstalar pandas/sklearn cada vez que tocamos algo
+      #venv en volumen named para no reinstalar pandas/sklearn en cada recreate
       - pc1_venv:/opt/pc1-venv
     ports:
       - "8000:8000"
     restart: unless-stopped
 
-  #frontend Angular servido por nginx. Mapeamos a 8080 en el host porque
-  #en muchas maquinas el puerto 80 esta ocupado (Apache, otro nginx...).
-  #en LORCA puedes cambiarlo a "80:80" si la MV tiene el 80 libre.
+  #frontend Angular servido por nginx, mapeado a 8080 (cambia a "80:80" si la MV tiene el 80 libre)
   frontend:
     build:
       context: ../frontend/frontend_pc2_grupo1
