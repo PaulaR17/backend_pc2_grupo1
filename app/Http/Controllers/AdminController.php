@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Incident;
+use App\Models\History;
 use Illuminate\Http\Request;
 
 class AdminController extends Controller
@@ -17,6 +18,8 @@ class AdminController extends Controller
             'users_inactive' => User::where('status', false)->count(),
             'incidents_total' => Incident::count(),
             'incidents_active' => Incident::where('active', true)->count(),
+            //volumen de rutas calculadas (entradas de historial)
+            'routes_total' => History::count(),
         ];
 
         return response()->json($resumen);
