@@ -6,6 +6,7 @@ use App\Models\Badge;
 use App\Models\Inventory;
 use App\Models\Item;
 use App\Models\User;
+use App\Models\VehicleLabel;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -22,8 +23,29 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->crearUsuarios();
+        $this->crearEtiquetas();
         $this->crearItems();
         $this->crearInventarioYLogros();
+    }
+
+    // -------------------------------------------------------
+    //  ETIQUETAS AMBIENTALES (distintivos DGT)
+    // -------------------------------------------------------
+    private function crearEtiquetas(): void
+    {
+        $etiquetas = [
+            ['name' => '0',   'description' => 'Cero emisiones: eléctricos e hidrógeno.'],
+            ['name' => 'ECO', 'description' => 'Híbridos y vehículos de gas.'],
+            ['name' => 'C',   'description' => 'Gasolina desde 2006 y diésel desde 2014.'],
+            ['name' => 'B',   'description' => 'Gasolina desde 2000 y diésel desde 2006.'],
+        ];
+
+        foreach ($etiquetas as $datos) {
+            VehicleLabel::updateOrCreate(
+                ['name' => $datos['name']],
+                $datos
+            );
+        }
     }
 
     // -------------------------------------------------------
