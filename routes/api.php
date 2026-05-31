@@ -20,16 +20,16 @@ Route::get('/health', function () {
     return response()->json(['status' => 'ok']);
 });
 
-// Autenticación pública
+//Autenticación pública
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
-// Sesiones de invitado
+//Sesiones de invitado
 Route::post('/guest/sessions', [GuestSessionController::class, 'create']);
 Route::get('/guest/sessions/{sessionId}/quota', [GuestSessionController::class, 'quota']);
 Route::post('/guest/sessions/{sessionId}/routes', [GuestSessionController::class, 'calculateRoute']);
 
-// Endpoints públicos
+//Endpoints públicos
 Route::get('/vehicle-labels', [VehicleController::class, 'labels']);
 
 Route::get('/incidents', [IncidentController::class, 'index']);
@@ -42,12 +42,12 @@ Route::get('/predictions/districts/{district}', [PredictionController::class, 'b
 Route::get('/locations/search', [RouteController::class, 'searchLocation']);
 Route::post('/routes/preview', [RouteController::class, 'preview']);
 
-// POIs públicos preparados para futuras mejoras
+//POIs públicos preparados para futuras mejoras
 Route::get('/pois/categories', [PoiController::class, 'categories']);
 Route::post('/pois/search', [PoiController::class, 'search']);
 Route::post('/pois/stats', [PoiController::class, 'stats']);
 
-// Usuario registrado
+//Usuario registrado
 Route::middleware('jwt.auth')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
@@ -93,7 +93,7 @@ Route::middleware('jwt.auth')->group(function () {
     Route::post('/users/{user}/purchases', [WalletController::class, 'purchase']);
 });
 
-// Administrador
+//Administrador
 Route::prefix('admin')
     ->middleware(['jwt.auth', 'admin'])
     ->group(function () {

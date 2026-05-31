@@ -11,13 +11,7 @@ use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
-// Seeder principal: crea usuarios, items, inventario y logros de prueba
-// para poder ver la app llena de contenido sin tener que crear nada a mano.
-//
-// Credenciales (contraseña en todos: password123):
-//   - admin@ecotraffic.com   (rol ADMIN)
-//   - usuario@ecotraffic.com (rol USER)
-//   - paula@ecotraffic.com   (rol USER)
+//seeder principal: crea usuarios, items, inventario y logros de prueba (contraseña en todos: password123)
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
@@ -46,9 +40,7 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    // -------------------------------------------------------
-    //  USUARIOS
-    // -------------------------------------------------------
+    //usuarios de prueba
     private function crearUsuarios(): void
     {
         $usuarios = [
@@ -83,13 +75,10 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    // -------------------------------------------------------
-    //  ITEMS (catálogo de la tienda)
-    // -------------------------------------------------------
+    //items del catálogo de la tienda
     private function crearItems(): void
     {
-        //el campo "image" guarda un emoji o ruta. usamos emoji para no
-        //depender de imagenes externas y para que se vea bien en cualquier UI.
+        //el campo "image" guarda un emoji para no depender de imagenes externas
         $items = [
             [
                 'name'        => 'Gorra clásica',
@@ -155,9 +144,7 @@ class DatabaseSeeder extends Seeder
         }
     }
 
-    // -------------------------------------------------------
-    //  INVENTARIO + LOGROS (solo para Paula y el usuario demo)
-    // -------------------------------------------------------
+    //inventario y logros (solo para Paula y el usuario demo)
     private function crearInventarioYLogros(): void
     {
         $paula = User::where('mail', 'paula@ecotraffic.com')->first();
@@ -166,7 +153,7 @@ class DatabaseSeeder extends Seeder
         $gafas = Item::where('name', 'Gafas redondas')->first();
 
         if ($paula && $gorra) {
-            // Insert raw para evitar problemas con columnas opcionales.
+            //insert raw para evitar problemas con columnas opcionales
             DB::table('inventory')->updateOrInsert(
                 ['user_id' => $paula->id, 'item_id' => $gorra->id],
                 ['quantity' => 1]
@@ -187,7 +174,7 @@ class DatabaseSeeder extends Seeder
             );
         }
 
-        // Logros: una insignia para Paula y otra para el usuario demo.
+        //una insignia para Paula y otra para el usuario demo
         if ($paula) {
             Badge::updateOrCreate(
                 ['user_id' => $paula->id, 'code' => 'FIRST_ROUTE'],

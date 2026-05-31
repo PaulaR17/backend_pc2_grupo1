@@ -14,9 +14,7 @@ class RouteController extends Controller
 {
     use HasRiskZones;
 
-    //autocompletado mezclando distritos locales y geocode de ORS.
-    //pedimos a ORS varios resultados extra para que las calles concretas
-    //tengan sitio aunque tambien aparezca algun distrito local que coincida
+    //autocompletado mezclando distritos locales y geocode de ORS
     public function searchLocation(Request $request)
     {
         $q = trim((string) $request->query('q'));
@@ -30,8 +28,7 @@ class RouteController extends Controller
             ]);
         } else {
             $localResults = $this->localMadridSuggestions($q);
-            //pedimos a ORS el limite completo: queremos que entren calles aunque
-            //haya coincidencias locales de distrito
+            //pedimos a ORS el limite completo para que entren calles concretas
             $orsResults = $this->orsLocationSuggestions($q, $limit);
 
             $merged = collect($localResults)
@@ -96,10 +93,7 @@ class RouteController extends Controller
                         'lat' => $coordinates[1],
                     ];
                 })->filter(function ($result) {
-                    //ya filtramos por bounding box + country=ES en la peticion;
-                    //aqui solo descartamos resultados sin coordenadas validas.
-                    //antes exigiamos que el texto contuviera "madrid", pero eso
-                    //tiraba calles concretas cuyo label no incluia la palabra.
+                    //descartamos resultados sin coordenadas validas
                     $valido = $result['lat'] !== null && $result['lon'] !== null;
 
                     return $valido;
@@ -507,9 +501,7 @@ class RouteController extends Controller
             'history_id' => 'required|integer|exists:history,id,user_id,' . $user->id,
         ]);
 
-        //buscamos incluyendo soft-deleted: el unique constraint cuenta tambien
-        //las filas marcadas como borradas, asi que si el usuario quito el
-        //favorito antes hay que restaurarlo en vez de intentar insertar
+        //buscamos incluyendo soft-deleted para restaurar el favorito si ya existia
         $favorite = Favorite::withTrashed()->firstOrNew([
             'user_id' => $user->id,
             'history_id' => $data['history_id'],
@@ -522,7 +514,6 @@ class RouteController extends Controller
         }
 
         //cargamos la relacion history para que el front pinte la fila
-        //sin tener que recargar la lista entera
         $favorite->load('history');
 
         return response()->json($favorite, 201);
@@ -540,10 +531,7 @@ class RouteController extends Controller
         return response()->json(['ok' => true]);
     }
 
-    //llamada al directions de ORS. Si nos pasan distritos a evitar, los
-    //convertimos a poligonos cuadrados (centrados en el centroide del
-    //distrito) y se los pasamos a ORS como "avoid_polygons" para que
-    //busque una ruta que los rodee.
+    //llamada al directions de ORS, evitando los distritos indicados con avoid_polygons
     private function callOrsDirections($profile, $origin, $destination, $steps, $geom, $extras, $avoidDistricts = [])
     {
         $apiKey = env('ORS_API_KEY');
@@ -565,8 +553,7 @@ class RouteController extends Controller
                 'geometry' => $geom,
             ];
 
-            //si hay distritos que evitar, montamos un MultiPolygon GeoJSON
-            //con un cuadrado por cada distrito y lo añadimos a "options"
+            //si hay distritos que evitar, montamos un MultiPolygon con un cuadrado por distrito
             if (!empty($avoidDistricts)) {
                 $poligonos = [];
                 foreach ($avoidDistricts as $id) {
@@ -604,9 +591,7 @@ class RouteController extends Controller
         return $resultado;
     }
 
-    //monta la respuesta segun los bloques que pida el cliente. si recibe
-    //origen y destino, cruza la ruta con las predicciones de PC1 y devuelve
-    //los distritos peligrosos atravesados en "risk_zones".
+    //monta la respuesta segun los bloques que pida el cliente
     private function buildRouteResponse($route, $include, $origin = null, $destination = null)
     {
         $out = [];

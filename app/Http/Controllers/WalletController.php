@@ -34,9 +34,7 @@ class WalletController extends Controller
         ]);
     }
 
-    //compra un item de la tienda: descuenta el precio del balance y lo
-    //añade al inventario. devuelve un error claro si no llega el saldo
-    //o si el item ya estaba comprado
+    //compra un item de la tienda: descuenta el precio y lo añade al inventario
     public function purchase(Request $request, User $user)
     {
         $data = $request->validate([

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('predictions', function (Blueprint $table) {
             $table->increments('id');
-            $table->unsignedTinyInteger('district'); // 1..21
+            $table->unsignedTinyInteger('district'); //1..21
             $table->decimal('probability', 5, 4);
             $table->enum('level', ['BAJO', 'MEDIO', 'ALTO']);
             $table->dateTime('predicted_at')->useCurrent();

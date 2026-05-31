@@ -67,8 +67,7 @@ class AdminController extends Controller
     //alta de incidencia en el mapa
     public function createIncident(Request $request)
     {
-        //title y description se aceptan vacios (null o ""). si dejaramos solo
-        //"sometimes|string" Laravel rechaza el null que manda el formulario.
+        //title y description se aceptan vacios (null o "")
         $data = $request->validate([
             'type' => 'required|in:ACCIDENT,ROADWORK,EVENT',
             'lat' => 'required|numeric|between:-90,90',

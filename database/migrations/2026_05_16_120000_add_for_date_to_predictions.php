@@ -4,10 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-// Añade la fecha objetivo de la predicción (a qué día se refiere).
-// La columna predicted_at original guardaba "cuándo se generó la predicción",
-// pero faltaba "para qué día predice", que es lo que el frontend necesita
-// para pintar el mapa por día.
+//añade la fecha objetivo de la predicción (a qué día se refiere)
 return new class extends Migration
 {
     public function up(): void

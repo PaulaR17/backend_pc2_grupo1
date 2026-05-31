@@ -12,7 +12,7 @@ return new class extends Migration
         $table->increments('id');
         $table->unsignedInteger('user_id');
         $table->unsignedInteger('history_id');
-        $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete(); //clave foranea a users al id, si se borra el usuario, se borran sus favoritos
+        $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete(); //si se borra el usuario, se borran sus favoritos
         $table->foreign('history_id')->references('id')->on('history')->cascadeOnDelete();
         //evitar duplicados: mismo user no puede guardar el mismo history 2 veces
         $table->unique(['user_id', 'history_id']);

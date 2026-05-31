@@ -16,7 +16,7 @@ return new class extends Migration
         $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();
         $table->index('user_id');
         $table->index('code');
-        //mejor usamos code para identificar que insignia tiene el usuario, al final como se ralacionan ya sabemos que una linea serña una badge que ya tiene el user
+        //usamos code para identificar que insignia tiene el usuario
     });
 }
 

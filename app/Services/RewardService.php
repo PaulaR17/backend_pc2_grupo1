@@ -7,9 +7,7 @@ use App\Models\Transaction;
 use App\Models\Badge;
 use Illuminate\Database\Eloquent\Model;
 
-//centraliza otorgar recompensas (chapitas + XP) por las acciones del usuario:
-//calcular ruta, reportar incidencia, etc. asi el ciclo "ganar -> gastar" queda
-//en un solo sitio y los controladores no se ensucian con logica de gamificacion
+//centraliza otorgar recompensas (chapitas + XP) por las acciones del usuario
 class RewardService
 {
     //XP necesario por nivel. nivel 1 -> 0..99, nivel 2 -> 100..199, etc.
@@ -23,8 +21,7 @@ class RewardService
         'WORK_SET' => ['coins' => 5, 'xp' => 5],
     ];
 
-    //da las chapitas y el XP que correspondan al usuario por el tipo de accion.
-    //devuelve un resumen con lo añadido para que el cliente lo muestre.
+    //da las chapitas y el XP que correspondan al usuario por el tipo de accion
     public function reward(int $userId, string $accion): array
     {
         $resumen = [
@@ -75,14 +72,12 @@ class RewardService
         return $resumen;
     }
 
-    //da las chapitas que correspondan segun cuantas veces ha hecho la accion;
-    //devuelve los codigos de las nuevas para poder avisar al usuario
+    //da las chapitas que correspondan segun cuantas veces ha hecho la accion
     private function concederChapitas(int $userId, string $accion): array
     {
         $nuevas = [];
 
-        //la transaccion de esta accion ya esta creada, asi que el contador
-        //incluye la accion que se acaba de hacer
+        //el contador ya incluye la accion que se acaba de hacer
         $veces = Transaction::where('user_id', $userId)
             ->where('type', $accion)
             ->count();
@@ -103,8 +98,7 @@ class RewardService
         return $nuevas;
     }
 
-    //crea la chapita solo si el usuario no la tenia ya.
-    //devuelve true si era nueva, false si ya la tenia.
+    //crea la chapita solo si el usuario no la tenia ya
     private function darChapita(int $userId, string $code): bool
     {
         $esNueva = false;
@@ -124,8 +118,7 @@ class RewardService
         return $esNueva;
     }
 
-    //balance actual = suma de todas las transactions del usuario (positivas
-    //por recompensas, negativas por compras en la tienda)
+    //balance actual = suma de todas las transactions del usuario
     public function balance(int $userId): int
     {
         $total = (int) Transaction::where('user_id', $userId)->sum('amount');

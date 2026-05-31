@@ -171,8 +171,7 @@ class GuestSessionController extends Controller
                                 $out['geometry'] = $route0['geometry'] ?? null;
                             }
 
-                            //zonas peligrosas atravesadas: cruzamos la ruta con las
-                            //predicciones de PC1 para que el invitado tambien las vea
+                            //zonas peligrosas atravesadas segun las predicciones de PC1
                             $distritos = $this->distritosEnRuta($validated['origin'], $validated['destination']);
                             $out['risk_zones'] = $this->riesgoDistritos($distritos);
 

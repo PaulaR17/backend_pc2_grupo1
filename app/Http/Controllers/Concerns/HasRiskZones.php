@@ -4,14 +4,10 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\Prediction;
 
-//logica para detectar que distritos atraviesa una ruta y cruzar con las
-//predicciones futuras de PC1. compartido entre RouteController (usuarios) y
-//GuestSessionController (invitados) para que ambos avisen de zonas peligrosas.
+//detecta que distritos atraviesa una ruta y los cruza con las predicciones de PC1
 trait HasRiskZones
 {
-    //centroides aproximados (lat, lon) de los 21 distritos de Madrid.
-    //sirven para detectar por que distrito pasa una ruta sin necesitar
-    //un GeoJSON completo de los limites administrativos.
+    //centroides aproximados (lat, lon) de los 21 distritos de Madrid
     private function centroidesDistritos()
     {
         return [
@@ -67,9 +63,7 @@ trait HasRiskZones
         ];
     }
 
-    //cuadrado aproximado de ~1.5km alrededor del centroide del distrito,
-    //devuelto como lista de coordenadas [lon, lat] para usar en ORS como
-    //"polygon to avoid" al recalcular ruta sin pasar por la zona peligrosa
+    //cuadrado de ~1.5km alrededor del centroide del distrito para usar en ORS como zona a evitar
     public function poligonoEvitarDistrito($id)
     {
         $centroides = $this->centroidesDistritos();
@@ -92,8 +86,7 @@ trait HasRiskZones
         return $resultado;
     }
 
-    //devuelve el id del distrito cuyo centroide esta mas cerca del punto dado;
-    //distancia euclidiana en grados, suficiente para una ciudad pequeña
+    //devuelve el id del distrito cuyo centroide esta mas cerca del punto dado
     private function distritoMasCercano($lat, $lon)
     {
         $mejor = null;
@@ -112,10 +105,7 @@ trait HasRiskZones
         return $mejor;
     }
 
-    //muestrea la linea recta entre origen y destino en 12 puntos y devuelve
-    //la lista (sin repetir) de distritos por los que pasa. aproxima la ruta
-    //ORS por una recta; no es exacto pero detecta los distritos atravesados
-    //en una ciudad de pocos kilometros como Madrid.
+    //muestrea la recta entre origen y destino y devuelve los distritos por los que pasa
     private function distritosEnRuta($origin, $destination)
     {
         $muestras = 12;
@@ -139,9 +129,7 @@ trait HasRiskZones
         return $distritos;
     }
 
-    //consulta predicciones futuras de los distritos dados y devuelve el peor
-    //caso por distrito (la probabilidad mas alta), para que el cliente avise
-    //al usuario antes de salir
+    //devuelve por distrito la prediccion futura con la probabilidad mas alta
     private function riesgoDistritos($distritos)
     {
         $resultado = [];

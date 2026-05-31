@@ -11,7 +11,7 @@ return new class extends Migration
     Schema::create('equipment', function (Blueprint $table) {
         $table->increments('id');
         $table->unsignedInteger('user_id');
-        $table->string('slot', 30); //antes cada slot tenía su propia columna (ya fuera hat, glasses, suit…), ahora con slot + item para que sea más flexible y no tengamos que cambiar la tabla cada vez que añadamos algo nuevo
+        $table->string('slot', 30); //slot + item para que sea flexible sin cambiar la tabla al añadir algo nuevo
         $table->unsignedInteger('item_id')->nullable();
         $table->dateTime('updated_at')->nullable();
         $table->foreign('user_id')->references('id')->on('users')->cascadeOnDelete();

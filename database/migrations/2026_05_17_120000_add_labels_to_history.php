@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-//añade el nombre legible del origen y destino a las rutas guardadas para
-//que el listado de historial/favoritos no muestre lat/lon crudo
+//añade el nombre legible del origen y destino a las rutas guardadas
 return new class extends Migration
 {
     public function up(): void

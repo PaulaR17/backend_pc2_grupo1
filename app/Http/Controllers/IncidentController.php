@@ -26,9 +26,7 @@ class IncidentController extends Controller
         return response()->json($row);
     }
 
-    //un usuario logueado reporta una incidencia (queda activa al instante).
-    //es distinto del alta de admin: aqui no se permite tocar el campo "active",
-    //y forzamos un titulo que indica que viene de un reporte de usuario
+    //un usuario logueado reporta una incidencia (queda activa al instante)
     public function report(Request $request)
     {
         $data = $request->validate([
@@ -42,8 +40,7 @@ class IncidentController extends Controller
         $data['active'] = true;
         $incident = Incident::create($data);
 
-        //recompensa por reportar: el endpoint requiere auth, asi que tenemos
-        //user_id seguro en la sesion JWT
+        //recompensa por reportar usando el user_id de la sesion JWT
         $userId = auth()->id();
         $reward = null;
         if ($userId) {

@@ -8,15 +8,15 @@ return new class extends Migration
 {
  public function up(): void
 {
-    Schema::create('users', function (Blueprint $table) { //creamos la tabla users con sus columnas, el blueprint es para definir la estructura de la tabla
-        $table->increments('id'); //al marcarlo como increments, se convierte en una clave primaria automatico y se sabe que es int tmb
+    Schema::create('users', function (Blueprint $table) { //creamos la tabla users con sus columnas
+        $table->increments('id'); //clave primaria entera autoincremental
         $table->string('name', 100);
         $table->string('mail', 100)->unique();
         $table->string('password_hash', 255);
         $table->enum('rol', ['USER', 'ADMIN']);
         $table->boolean('status')->default(true);
         $table->timestamps();;
-        //índices extra para buscar rapidito por columnas y no tener que mirar TODO
+        //índices extra para buscar rápido por columnas
         $table->index('rol');
         $table->index('status');
     });
