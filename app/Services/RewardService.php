@@ -75,9 +75,8 @@ class RewardService
         return $resumen;
     }
 
-    //mira cuantas veces ha hecho el usuario esta accion y le da las chapitas
-    //que correspondan. devuelve los codigos de las que son nuevas para que el
-    //cliente pueda avisar "has ganado la chapita X".
+    //da las chapitas que correspondan segun cuantas veces ha hecho la accion;
+    //devuelve los codigos de las nuevas para poder avisar al usuario
     private function concederChapitas(int $userId, string $accion): array
     {
         $nuevas = [];

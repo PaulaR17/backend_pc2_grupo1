@@ -28,9 +28,7 @@ class DatabaseSeeder extends Seeder
         $this->crearInventarioYLogros();
     }
 
-    // -------------------------------------------------------
-    //  ETIQUETAS AMBIENTALES (distintivos DGT)
-    // -------------------------------------------------------
+    //etiquetas ambientales (distintivos DGT) para elegir en el perfil
     private function crearEtiquetas(): void
     {
         $etiquetas = [
